@@ -732,6 +732,7 @@ async function fazerLogin(){
     const h=await sha256(senha);
     if(h!==u.senhaHash){document.getElementById('login-erro').textContent='Senha incorreta';document.getElementById('login-loading').textContent='';return;}
     usuarioLogado=u;
+    localStorage.setItem('gmLogado',u.codigo);
     S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
     document.getElementById('login-loading').textContent='';
     if(u.primeiroAcesso){
@@ -779,7 +780,7 @@ async function salvarTrocaSenhaVol(){
 function confirmarSair(){
   showPopup({icon:'👋',title:'Sair',msg:'Deseja sair do GastôMetro?',btns:[
     {label:'Cancelar',style:'ghost'},
-    {label:'Sair',style:'danger',action:()=>{usuarioLogado=null;S={renda:0,transactions:[],fixedExpenses:[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:'',theme:'light'};document.getElementById('app').classList.add('hidden');document.getElementById('tela-login').classList.remove('hidden');document.getElementById('login-codigo').value='';document.getElementById('login-senha').value='';}}
+    {label:'Sair',style:'danger',action:()=>{localStorage.removeItem('gmLogado');usuarioLogado=null;S={renda:0,transactions:[],fixedExpenses:[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:'',theme:'light'};document.getElementById('app').classList.add('hidden');document.getElementById('tela-login').classList.remove('hidden');document.getElementById('login-codigo').value='';document.getElementById('login-senha').value='';}}
   ]});
 }
 
@@ -998,8 +999,21 @@ async function init(){
   // Carrega Chart.js
   await new Promise(res=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';s.onload=res;s.onerror=res;document.head.appendChild(s);});
   document.getElementById('splash').classList.add('hidden');
-  if(isAdmin){initAdmin();}
-  else{document.getElementById('tela-login').classList.remove('hidden');}
+  if(isAdmin){initAdmin();return;}
+  // Auto-login
+  const codigoSalvo=localStorage.getItem('gmLogado');
+  if(codigoSalvo){
+    try{
+      const snap=await getDoc(doc(db,'gastometro_usuarios',codigoSalvo));
+      if(snap.exists()){
+        const u=snap.data();
+        usuarioLogado=u;
+        S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
+        abrirApp();return;
+      }
+    }catch(e){}
+  }
+  document.getElementById('tela-login').classList.remove('hidden');
 }
 init();
 </script>
