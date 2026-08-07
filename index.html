@@ -437,7 +437,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
   </div>
 </div>
 
-<button class="fab" onclick="openModal()" id="fab">+</button>
+<button class="fab" onclick="openModal()" id="fab" style="display:none">+</button>
 
 <div class="bottom-nav">
   <button class="bnav-btn active" onclick="switchPanel('resumo',0)"><span class="ico">📊</span>Resumo</button>
@@ -845,7 +845,7 @@ function render(){
   const pct=S.renda>0?Math.min((total/S.renda)*100,100):0;
   const bar=document.getElementById('prog-bar');
   bar.style.width=pct+'%';bar.className='prog-bar'+(pct>=90?' danger':pct>=70?' warn':'');
-  document.getElementById('prog-label-txt').textContent=pct.toFixed(0)+'% do orcamento';
+  document.getElementById('prog-label-txt').textContent=pct.toFixed(0)+'% do orçamento';
   document.getElementById('prog-label-amt').textContent=fmt(total)+' / '+fmt(S.renda);
   const paidTotal=txs.filter(t=>t.paid).reduce((a,t)=>a+t.val,0);
   document.getElementById('paid-val').textContent=fmt(paidTotal);
@@ -918,7 +918,7 @@ function addExpense(){
 
 // ── OTHER ACTIONS ─────────────────────────────────────────────
 function changeMonth(dir){let m=S.currentMonth+dir,y=S.currentYear;if(m<0){m=11;y--;}if(m>11){m=0;y++;}S.currentMonth=m;S.currentYear=y;render();}
-function switchPanel(name,idx){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.getElementById('panel-'+name).classList.add('active');document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.bnav-btn')[idx].classList.add('active');document.querySelectorAll('.tabs .tab').forEach((t,i)=>t.classList.toggle('active',i===idx));document.getElementById('fab').style.display=name==='config'?'none':'';}
+function switchPanel(name,idx){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.getElementById('panel-'+name).classList.add('active');document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.bnav-btn')[idx].classList.add('active');document.querySelectorAll('.tabs .tab').forEach((t,i)=>t.classList.toggle('active',i===idx));document.getElementById('fab').style.display=name==='lancamentos'?'flex':'none';}
 function toggleTheme(){const isDark=document.documentElement.getAttribute('data-theme')==='dark';const next=isDark?'light':'dark';document.documentElement.setAttribute('data-theme',next);document.getElementById('theme-toggle').classList.toggle('on',next==='dark');S.theme=next;save();if(pizzaChart){pizzaChart.destroy();pizzaChart=null;}if(barChart){barChart.destroy();barChart=null;}render();}
 function editRenda(){document.getElementById('inp-renda').value=S.renda||'';document.getElementById('modal-renda').classList.remove('hidden');setTimeout(()=>document.getElementById('inp-renda').focus(),100);}
 function closeModalRenda(){document.getElementById('modal-renda').classList.add('hidden');}
