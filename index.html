@@ -643,26 +643,9 @@ const isAdmin=new URLSearchParams(window.location.search).get('admin')==='true';
 const ADMIN_PASS_HASH='f78f567b97b414424ddd0bebf058cc9a8358378e9d82124784b5f6ea0db86dde'; // senha: mrqlog2026
 
 async function initAdmin(){
-  document.getElementById('splash').classList.add('hidden');
-  // pede senha admin
-  showPopup({
-    icon:'🔐',
-    title:'Acesso Admin',
-    msg:'Digite a senha de administrador:',
-    input:{placeholder:'Senha admin'},
-    btns:[
-      {label:'Cancelar',style:'ghost',action:()=>window.location.href=window.location.pathname},
-      {label:'Entrar',style:'primary',action:async()=>{
-        const senha=getPopupInput();
-        if(senha==='mrqlog2026'){
-          document.getElementById('tela-admin').classList.remove('hidden');
-          carregarListaUsuarios();
-        } else {
-          showPopup({icon:'❌',title:'Senha incorreta',msg:'Tente novamente.',btns:[{label:'OK',style:'primary',action:initAdmin}]});
-        }
-      }}
-    ]
-  });
+  document.getElementById("splash").classList.add("hidden");
+  document.getElementById("tela-admin").classList.remove("hidden");
+  carregarListaUsuarios();
 }
 
 function sairAdmin(){
