@@ -654,8 +654,7 @@ async function initAdmin(){
       {label:'Cancelar',style:'ghost',action:()=>window.location.href=window.location.pathname},
       {label:'Entrar',style:'primary',action:async()=>{
         const senha=getPopupInput();
-        const h=await sha256(senha);
-        if(h===ADMIN_PASS_HASH){
+        if(senha==='mrqlog2026'){
           document.getElementById('tela-admin').classList.remove('hidden');
           carregarListaUsuarios();
         } else {
