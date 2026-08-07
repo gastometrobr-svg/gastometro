@@ -1,10 +1,11 @@
-const CACHE_NAME = 'gastometro-v1';
+const CACHE_NAME = 'gastometro-v2';
 const urlsToCache = [
   '/gastometro/',
   '/gastometro/index.html'
 ];
 
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
