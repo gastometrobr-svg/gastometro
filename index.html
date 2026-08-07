@@ -563,12 +563,12 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs } fro
 
 // !! SUBSTITUA PELAS SUAS CREDENCIAIS DO FIREBASE !!
 const firebaseConfig = {
-  apiKey: "COLE_AQUI",
-  authDomain: "COLE_AQUI",
-  projectId: "COLE_AQUI",
-  storageBucket: "COLE_AQUI",
-  messagingSenderId: "COLE_AQUI",
-  appId: "COLE_AQUI"
+  apiKey: "AIzaSyCJtV0ym0DIAQ1xFcThsvecRolYIhi0OYw",
+  authDomain: "gastometro-e0705.firebaseapp.com",
+  projectId: "gastometro-e0705",
+  storageBucket: "gastometro-e0705.firebasestorage.app",
+  messagingSenderId: "138318230251",
+  appId: "1:138318230251:web:6066dbc7fb042367d984ae"
 };
 
 const fbApp = initializeApp(firebaseConfig);
@@ -755,7 +755,7 @@ function enviarWhatsAppAdmin(){
   const codigo=_codigoRecem||document.getElementById('adm-codigo').value.trim();
   const nome=document.getElementById('adm-nome').value.trim();
   if(!numero){toast('Informe o WhatsApp do cliente');return;}
-  const link='https://SEU-USUARIO.github.io/gastometro/';
+  const link='https://gastometrobr-svg.github.io/gastometro/';
   const saudacao=nome?`Ola, ${nome}!`:'Ola!';
   const msg=`${saudacao}\n\nAqui estao seus dados de acesso ao *GastoMetro*:\n\n*Codigo de acesso:* ${codigo}\n*Senha:* 12345\n\nAcesse pelo link:\n${link}\n\n1. Abra o link acima\n2. Digite o codigo: *${codigo}*\n3. Entre com a senha e crie uma senha pessoal\n\nQualquer duvida e so chamar!`;
   window.open(`https://wa.me/55${numero}?text=${encodeURIComponent(msg)}`,'_blank');
