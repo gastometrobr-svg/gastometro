@@ -616,7 +616,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 <script type="module">
 // ── FIREBASE ────────────────────────────────────────────────
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // !! SUBSTITUA PELAS SUAS CREDENCIAIS DO FIREBASE !!
 const firebaseConfig = {
@@ -667,6 +667,29 @@ let S={renda:0,transactions:[],fixedExpenses:[],currentYear:new Date().getFullYe
 let pizzaChart=null,barChart=null;
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
 let _codigoRecem='';
+let _unsubListener=null;
+
+// ── LISTENER TEMPO REAL (onSnapshot) ────────────────────────
+function iniciarListener(codigo){
+  if(_unsubListener)_unsubListener(); // cancela listener anterior se existir
+  _unsubListener=onSnapshot(doc(db,'gastometro_usuarios',codigo),(snap)=>{
+    if(!snap.exists()||!usuarioLogado)return;
+    const fu=snap.data();
+    // Atualiza estado em memória
+    S.renda=fu.renda||0;
+    S.transactions=fu.transactions||[];
+    S.fixedExpenses=fu.fixedExpenses||[];
+    S.lastYM=fu.lastYM||'';
+    // Renova cache local
+    localStorage.setItem('gmCache_'+codigo,JSON.stringify({
+      nome:fu.nome,codigo:fu.codigo,senhaHash:fu.senhaHash,
+      primeiroAcesso:false,renda:fu.renda||0,
+      transactions:fu.transactions||[],fixedExpenses:fu.fixedExpenses||[],
+      lastYM:fu.lastYM||'',theme:fu.theme||S.theme
+    }));
+    render();renderFixedList();
+  },()=>{}); // ignora erros de conexão silenciosamente
+}
 
 // ── POPUP SISTEMA ────────────────────────────────────────────
 function showPopup({icon,title,msg,input,btns}){
@@ -805,28 +828,54 @@ function enviarWhatsAppAdmin(){
 async function fazerLogin(){
   const codigo=document.getElementById('login-codigo').value.trim().toUpperCase();
   const senha=document.getElementById('login-senha').value;
-  document.getElementById('login-erro').textContent='';
-  if(!codigo||!senha){document.getElementById('login-erro').textContent='Preencha todos os campos';return;}
-  document.getElementById('login-loading').textContent='Verificando...';
+  const erroEl=document.getElementById('login-erro');
+  const loadEl=document.getElementById('login-loading');
+  erroEl.textContent='';
+  if(!codigo||!senha){erroEl.textContent='Preencha todos os campos';return;}
+  loadEl.classList.remove('hidden');loadEl.textContent='Verificando...';
+  const h=await sha256(senha);
+
+  // Tenta cache local primeiro — login instantâneo sem Firebase
+  try{
+    const cacheStr=localStorage.getItem('gmCache_'+codigo);
+    if(cacheStr){
+      const cached=JSON.parse(cacheStr);
+      if(h===cached.senhaHash){
+        usuarioLogado=cached;
+        localStorage.setItem('gmLogado',codigo);
+        S={renda:cached.renda||0,transactions:cached.transactions||[],fixedExpenses:cached.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:cached.lastYM||'',theme:cached.theme||'light'};
+        loadEl.classList.add('hidden');
+        if(cached.primeiroAcesso){
+          document.getElementById('tela-login').classList.add('hidden');
+          document.getElementById('tela-troca-senha').classList.remove('hidden');
+        } else {
+          abrirApp();
+        }
+        iniciarListener(codigo); // listener em tempo real mantém dados sempre frescos
+        return;
+      }
+    }
+  }catch(e){}
+
+  // Sem cache ou senha errada no cache — verifica no Firebase
   try{
     const snap=await getDoc(doc(db,'gastometro_usuarios',codigo));
-    if(!snap.exists()){document.getElementById('login-erro').textContent='Codigo nao encontrado';document.getElementById('login-loading').textContent='';return;}
+    if(!snap.exists()){erroEl.textContent='Codigo nao encontrado';loadEl.classList.add('hidden');return;}
     const u=snap.data();
-    const h=await sha256(senha);
-    if(h!==u.senhaHash){document.getElementById('login-erro').textContent='Senha incorreta';document.getElementById('login-loading').textContent='';return;}
+    if(h!==u.senhaHash){erroEl.textContent='Senha incorreta';loadEl.classList.add('hidden');return;}
     usuarioLogado=u;
     localStorage.setItem('gmLogado',u.codigo);
     S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
-    // Salva cache completo no login para auto-login instantâneo
     localStorage.setItem('gmCache_'+u.codigo,JSON.stringify({nome:u.nome,codigo:u.codigo,senhaHash:u.senhaHash,primeiroAcesso:false,renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],lastYM:u.lastYM||'',theme:u.theme||'light'}));
-    document.getElementById('login-loading').textContent='';
+    loadEl.classList.add('hidden');
     if(u.primeiroAcesso){
       document.getElementById('tela-login').classList.add('hidden');
       document.getElementById('tela-troca-senha').classList.remove('hidden');
     } else {
       abrirApp();
     }
-  }catch(e){document.getElementById('login-erro').textContent='Erro de conexao. Tente novamente.';document.getElementById('login-loading').textContent='';}
+    iniciarListener(u.codigo); // listener em tempo real mantém dados sempre frescos
+  }catch(e){erroEl.textContent='Erro de conexao. Tente novamente.';loadEl.classList.add('hidden');}
 }
 
 async function trocarSenha(){
@@ -1215,23 +1264,7 @@ async function init(){
     usuarioLogado=usuarioDados;
     S={renda:usuarioDados.renda||0,transactions:usuarioDados.transactions||[],fixedExpenses:usuarioDados.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:usuarioDados.lastYM||'',theme:usuarioDados.theme||'light'};
     abrirApp();
-    // Sincroniza com Firebase em background e renova cache local
-    if(codigoSalvo){
-      getDoc(doc(db,'gastometro_usuarios',codigoSalvo)).then(snap=>{
-        if(snap.exists()){
-          const fu=snap.data();
-          S.renda=fu.renda||0;S.transactions=fu.transactions||[];
-          S.fixedExpenses=fu.fixedExpenses||[];S.lastYM=fu.lastYM||'';
-          localStorage.setItem('gmCache_'+codigoSalvo,JSON.stringify({
-            nome:fu.nome,codigo:fu.codigo,senhaHash:fu.senhaHash,
-            primeiroAcesso:false,renda:fu.renda||0,
-            transactions:fu.transactions||[],fixedExpenses:fu.fixedExpenses||[],
-            lastYM:fu.lastYM||'',theme:fu.theme||S.theme
-          }));
-          render();renderFixedList();
-        }
-      }).catch(()=>{});
-    }
+    if(codigoSalvo) iniciarListener(codigoSalvo); // listener em tempo real
     return;
   }
   document.getElementById('tela-login').classList.remove('hidden');
