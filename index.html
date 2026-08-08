@@ -559,10 +559,10 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
     <div class="modal-handle"></div>
     <div class="modal-title">Gasto Parcelado</div>
     <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Lançado automaticamente a cada mês até acabar as parcelas.</div>
-    <div class="field"><label>Valor de cada parcela (R$)</label><input type="number" id="parc-valor" class="amt-input" placeholder="0,00" inputmode="decimal" step="0.01" min="0"/></div>
     <div class="field"><label>Descrição</label><input type="text" id="parc-desc" placeholder="Ex: Empréstimo Banco, Financiamento"/></div>
-    <div class="field"><label>Número de parcelas</label><input type="number" id="parc-total" placeholder="Ex: 12" inputmode="numeric" min="1" max="360" style="font-size:20px;font-weight:700;text-align:center"/></div>
+    <div class="field"><label>Número de parcelas</label><input type="number" id="parc-total" placeholder="Ex: 12" inputmode="numeric" min="1" max="360" style="font-size:20px;font-weight:700;text-align:center" oninput="gerarCamposParcelas()"/></div>
     <div class="field"><label>Mês inicial</label><input type="month" id="parc-inicio"/></div>
+    <div id="parc-valores-container"></div>
     <button class="submit-btn" onclick="salvarParcelado()">Salvar parcelado</button>
   </div>
 </div>
@@ -1079,43 +1079,59 @@ window.sairAdmin=sairAdmin;
 // ── PARCELADO ──────────────────────────────────────────────
 let parcSelectedCat='contas';
 function abrirModalParcelado(){
-  parcSelectedCat='contas';
-  document.getElementById('parc-valor').value='';
   document.getElementById('parc-desc').value='';
   document.getElementById('parc-total').value='';
+  document.getElementById('parc-valores-container').innerHTML='';
   const now=new Date();
   document.getElementById('parc-inicio').value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  renderParcCatGrid();
   document.getElementById('modal-parcelas-bg').classList.remove('hidden');
 }
-function renderParcCatGrid(){
-  const el=document.getElementById('parc-cat-grid');
-  if(!el)return;
-  el.innerHTML=CATS.map(c=>`<button class="cat-btn ${c.id===parcSelectedCat?'selected':''}" onclick="window.parcSelectCat('${c.id}')"><span class="ico">${c.icon}</span>${c.name}</button>`).join('');
+function gerarCamposParcelas(){
+  const total=parseInt(document.getElementById('parc-total').value)||0;
+  const container=document.getElementById('parc-valores-container');
+  if(total<1||total>120){container.innerHTML='';return;}
+  let html='<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Valor de cada parcela (R$)</div>';
+  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><input type="number" id="parc-val-todos" placeholder="Mesmo valor para todas" inputmode="decimal" step="0.01" style="flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;outline:none"/><button onclick="preencherTodos()" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Aplicar a todas</button></div>';
+  for(let i=1;i<=total;i++){
+    html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="font-size:12px;color:var(--text3);width:60px;flex-shrink:0">Parcela ${i}</div><input type="number" id="parc-val-${i}" placeholder="0,00" inputmode="decimal" step="0.01" style="flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;outline:none"/></div>`;
+  }
+  container.innerHTML=html;
 }
-window.parcSelectCat=function(id){parcSelectedCat=id;renderParcCatGrid();};
+function preencherTodos(){
+  const val=document.getElementById('parc-val-todos').value;
+  const total=parseInt(document.getElementById('parc-total').value)||0;
+  for(let i=1;i<=total;i++){
+    const inp=document.getElementById('parc-val-'+i);
+    if(inp)inp.value=val;
+  }
+}
 function salvarParcelado(){
-  const val=parseFloat(document.getElementById('parc-valor').value);
   const desc=document.getElementById('parc-desc').value.trim();
   const total=parseInt(document.getElementById('parc-total').value);
   const inicio=document.getElementById('parc-inicio').value;
-  if(!val||val<=0){toast('Informe o valor da parcela');return;}
   if(!desc){toast('Informe a descrição');return;}
   if(!total||total<1){toast('Informe o número de parcelas');return;}
   if(!inicio){toast('Informe o mês inicial');return;}
+  // Coletar valores
+  const valores=[];
+  for(let i=1;i<=total;i++){
+    const v=parseFloat(document.getElementById('parc-val-'+i)?.value||'0');
+    if(!v||v<=0){toast(`Informe o valor da parcela ${i}`);return;}
+    valores.push(v);
+  }
   if(!S.fixedExpenses)S.fixedExpenses=[];
   const id='parc_'+Date.now();
-  S.fixedExpenses.push({id,desc,cat:parcSelectedCat,val,parcelado:true,totalParcelas:total,parcelaAtual:0,inicioYM:inicio});
+  S.fixedExpenses.push({id,desc,cat:'outros',valores,parcelado:true,totalParcelas:total,parcelaAtual:0,inicioYM:inicio});
   // Lançar parcelas já devidas
   const [anoInicio,mesInicio]=inicio.split('-').map(Number);
   const now=new Date();
   let parcelaAtual=0;
   for(let i=0;i<total;i++){
     const d=new Date(anoInicio,mesInicio-1+i,1);
-    if(d<=now&&parcelaAtual<total){
+    if(d<=now){
       parcelaAtual++;
       const dateStr=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';
-      S.transactions.push({id:Date.now()+Math.random(),desc:`${desc} (${parcelaAtual}/${total})`,cat:parcSelectedCat,val,date:dateStr,paid:false,parceladoId:id});
+      S.transactions.push({id:Date.now()+Math.random(),desc:`${desc} (${parcelaAtual}/${total})`,cat:'outros',val:valores[i],date:dateStr,paid:false,parceladoId:id});
     }
   }
   S.fixedExpenses[S.fixedExpenses.length-1].parcelaAtual=parcelaAtual;
@@ -1128,22 +1144,27 @@ function insertFixedExpenses(){
   if(!S.fixedExpenses||!S.fixedExpenses.length)return;
   const y=S.currentYear,m=S.currentMonth;
   const dateStr=y+'-'+String(m+1).padStart(2,'0')+'-01';
+  const toRemove=[];
   S.fixedExpenses.forEach(fe=>{
     if(fe.parcelado){
-      if(fe.parcelaAtual>=fe.totalParcelas)return;
+      if(fe.parcelaAtual>=fe.totalParcelas){toRemove.push(fe.id);return;}
+      const val=fe.valores?fe.valores[fe.parcelaAtual]:fe.val;
       fe.parcelaAtual++;
-      S.transactions.push({id:Date.now()+Math.random(),desc:`${fe.desc} (${fe.parcelaAtual}/${fe.totalParcelas})`,cat:fe.cat,val:fe.val,date:dateStr,paid:false,parceladoId:fe.id});
+      S.transactions.push({id:Date.now()+Math.random(),desc:`${fe.desc} (${fe.parcelaAtual}/${fe.totalParcelas})`,cat:fe.cat||'outros',val,date:dateStr,paid:false,parceladoId:fe.id});
       if(fe.parcelaAtual>=fe.totalParcelas){
-        S.fixedExpenses=S.fixedExpenses.filter(f=>f.id!==fe.id);
-        toast(`${fe.desc} — todas as ${fe.totalParcelas} parcelas pagas!`);
+        toRemove.push(fe.id);
+        toast(`${fe.desc} — todas as ${fe.totalParcelas} parcelas concluídas!`);
       }
     } else {
       S.transactions.push({id:Date.now()+Math.random(),desc:fe.desc,cat:fe.cat,val:fe.val,date:dateStr,paid:false,fixed:true});
     }
   });
+  if(toRemove.length)S.fixedExpenses=S.fixedExpenses.filter(f=>!toRemove.includes(f.id));
 }
 window.abrirModalParcelado=abrirModalParcelado;
 window.salvarParcelado=salvarParcelado;
+window.gerarCamposParcelas=gerarCamposParcelas;
+window.preencherTodos=preencherTodos;
 
 // ── BOOT ─────────────────────────────────────────────────────
 async function init(){
