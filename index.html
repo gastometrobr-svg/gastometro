@@ -817,6 +817,8 @@ async function fazerLogin(){
     usuarioLogado=u;
     localStorage.setItem('gmLogado',u.codigo);
     S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
+    // Salva cache completo no login para auto-login instantâneo
+    localStorage.setItem('gmCache_'+u.codigo,JSON.stringify({nome:u.nome,codigo:u.codigo,senhaHash:u.senhaHash,primeiroAcesso:false,renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],lastYM:u.lastYM||'',theme:u.theme||'light'}));
     document.getElementById('login-loading').textContent='';
     if(u.primeiroAcesso){
       document.getElementById('tela-login').classList.add('hidden');
