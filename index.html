@@ -826,7 +826,7 @@ async function fazerLogin(){
       document.getElementById('tela-login').classList.add('hidden');
       document.getElementById('tela-troca-senha').classList.remove('hidden');
     } else {
-      abrirApp();
+      startSync(u.codigo);abrirApp();
     }
   }catch(e){document.getElementById('login-erro').textContent='Erro de conexao. Tente novamente.';document.getElementById('login-loading').textContent='';}
 }
@@ -841,7 +841,7 @@ async function trocarSenha(){
   await updateDoc(doc(db,'gastometro_usuarios',usuarioLogado.codigo),{senhaHash:h,primeiroAcesso:false});
   usuarioLogado.senhaHash=h;usuarioLogado.primeiroAcesso=false;
   document.getElementById('tela-troca-senha').classList.add('hidden');
-  abrirApp();
+  startSync(usuarioLogado.codigo);abrirApp();
   toast('Senha criada com sucesso!');
 }
 
@@ -1196,17 +1196,9 @@ async function init(){
   document.getElementById('splash').classList.add('hidden');
   if(isAdmin){initAdmin();return;}
   // Auto-login
-  const codigoSalvo=localStorage.getItem('gmLogado');
-  if(codigoSalvo){
-    // Carrega cache local imediatamente (evita tela de login em conexão lenta)
-    const cache=localStorage.getItem('gmCache_'+codigoSalvo);
-    if(cache){
-      try{
-        const c=JSON.parse(cache);
-        S={renda:c.renda||0,transactions:c.transactions||[],fixedExpenses:c.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:c.lastYM||'',theme:c.theme||'light'};
-      }catch(_){}
-    }
-    try{
+  try{
+    const codigoSalvo=localStorage.getItem('gmLogado');
+    if(codigoSalvo){
       const snap=await getDoc(doc(db,'gastometro_usuarios',codigoSalvo));
       if(snap.exists()){
         const u=snap.data();
@@ -1215,18 +1207,8 @@ async function init(){
         startSync(u.codigo);
         abrirApp();return;
       }
-    }catch(e){
-      // Offline ou erro — se tem cache, entra mesmo assim
-      if(cache){
-        try{
-          const snap2=await getDoc(doc(db,'gastometro_usuarios',codigoSalvo));
-          if(snap2.exists()){usuarioLogado=snap2.data();}
-        }catch(_){}
-        if(usuarioLogado){startSync(codigoSalvo);abrirApp();return;}
-      }
-      console.warn('Auto-login falhou:',e);
     }
-  }
+  }catch(e){console.warn('Auto-login falhou:',e);}
   document.getElementById('tela-login').classList.remove('hidden');
 }
 init();
