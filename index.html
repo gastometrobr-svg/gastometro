@@ -619,7 +619,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 <script type="module">
 // ── FIREBASE ────────────────────────────────────────────────
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // !! SUBSTITUA PELAS SUAS CREDENCIAIS DO FIREBASE !!
 const firebaseConfig = {
@@ -666,6 +666,8 @@ async function sha256(str){
 
 // ── STATE ───────────────────────────────────────────────────
 let usuarioLogado=null; // {codigo, nome, senhaHash, primeiroAcesso}
+let _snapshotUnsub=null;
+let _saving=false;
 let S={renda:0,transactions:[],fixedExpenses:[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:'',theme:'light'};
 let pizzaChart=null,barChart=null;
 let _codigoRecem='';
@@ -889,10 +891,28 @@ function abrirApp(){
 async function save(){
   if(!usuarioLogado)return;
   try{
+    _saving=true;
     await updateDoc(doc(db,'gastometro_usuarios',usuarioLogado.codigo),{
       renda:S.renda,transactions:S.transactions,fixedExpenses:S.fixedExpenses,lastYM:S.lastYM,theme:S.theme
     });
+    localStorage.setItem('gmCache_'+usuarioLogado.codigo,JSON.stringify({renda:S.renda,transactions:S.transactions,fixedExpenses:S.fixedExpenses,lastYM:S.lastYM,theme:S.theme}));
   }catch(e){console.warn('Erro ao salvar:',e);}
+  finally{setTimeout(()=>{_saving=false;},1500);}
+}
+
+function startSync(codigo){
+  if(_snapshotUnsub)_snapshotUnsub();
+  _snapshotUnsub=onSnapshot(doc(db,'gastometro_usuarios',codigo),(snap)=>{
+    if(!snap.exists()||_saving||!usuarioLogado)return;
+    const u=snap.data();
+    S.renda=u.renda||0;
+    S.transactions=u.transactions||[];
+    S.fixedExpenses=u.fixedExpenses||[];
+    S.lastYM=u.lastYM||'';
+    if(u.theme&&u.theme!==S.theme){S.theme=u.theme;if(u.theme==='dark'){document.documentElement.setAttribute('data-theme','dark');}else{document.documentElement.removeAttribute('data-theme');}}
+    render();
+    renderFixedList();
+  },(e)=>console.warn('Sync error:',e));
 }
 
 // ── VIRADA DE MES ─────────────────────────────────────────────
@@ -1176,18 +1196,37 @@ async function init(){
   document.getElementById('splash').classList.add('hidden');
   if(isAdmin){initAdmin();return;}
   // Auto-login
-  try{
-    const codigoSalvo=localStorage.getItem('gmLogado');
-    if(codigoSalvo){
+  const codigoSalvo=localStorage.getItem('gmLogado');
+  if(codigoSalvo){
+    // Carrega cache local imediatamente (evita tela de login em conexão lenta)
+    const cache=localStorage.getItem('gmCache_'+codigoSalvo);
+    if(cache){
+      try{
+        const c=JSON.parse(cache);
+        S={renda:c.renda||0,transactions:c.transactions||[],fixedExpenses:c.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:c.lastYM||'',theme:c.theme||'light'};
+      }catch(_){}
+    }
+    try{
       const snap=await getDoc(doc(db,'gastometro_usuarios',codigoSalvo));
       if(snap.exists()){
         const u=snap.data();
         usuarioLogado=u;
         S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
+        startSync(u.codigo);
         abrirApp();return;
       }
+    }catch(e){
+      // Offline ou erro — se tem cache, entra mesmo assim
+      if(cache){
+        try{
+          const snap2=await getDoc(doc(db,'gastometro_usuarios',codigoSalvo));
+          if(snap2.exists()){usuarioLogado=snap2.data();}
+        }catch(_){}
+        if(usuarioLogado){startSync(codigoSalvo);abrirApp();return;}
+      }
+      console.warn('Auto-login falhou:',e);
     }
-  }catch(e){console.warn('Auto-login falhou:',e);}
+  }
   document.getElementById('tela-login').classList.remove('hidden');
 }
 init();
