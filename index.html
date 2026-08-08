@@ -423,9 +423,6 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
           <div class="prog-bar-bg"><div class="prog-bar" id="prog-bar" style="width:0%"></div></div>
         </div>
       </div>
-      <div class="card"><div class="card-title">Por categoria</div><div id="cat-breakdown"></div></div>
-      <div class="card"><div class="card-title">Distribuição</div><div class="chart-wrap"><canvas id="chart-pizza"></canvas></div></div>
-      <div class="card"><div class="card-title">Últimos lançamentos</div><div id="recent-list"></div></div>
     </div>
 
     <div id="panel-lancamentos" class="panel">
@@ -1040,7 +1037,7 @@ function closeFixedModal(){document.getElementById('fixed-modal-bg').classList.a
 function renderFxCatGrid(){}
 window.fxSelectCat=function(id){fxSelectedCat=id;renderFxCatGrid();};
 function selectFixedPayment(v){fxSelectedPayment=v;}
-function saveFixedExpense(){const val=parseFloat(document.getElementById('fx-valor').value);const desc=document.getElementById('fx-desc').value.trim();if(!val||val<=0){toast('Informe o valor');return;}if(!desc){toast('Informe a descricao');return;}if(!S.fixedExpenses)S.fixedExpenses=[];S.fixedExpenses.push({id:Date.now()+'',desc,cat:fxSelectedCat,val,pay:fxSelectedPayment});save();closeFixedModal();renderFixedList();toast('Gasto fixo salvo! Sera lancado todo mes.');}
+function saveFixedExpense(){const val=parseFloat(document.getElementById('fx-valor').value);const desc=document.getElementById('fx-desc').value.trim();if(!val||val<=0){toast('Informe o valor');return;}if(!desc){toast('Informe a descricao');return;}if(!S.fixedExpenses)S.fixedExpenses=[];S.fixedExpenses.push({id:Date.now()+'',desc,cat:fxSelectedCat,val,pay:fxSelectedPayment});save();closeFixedModal();renderFixedList();toast('Gasto fixo salvo! Será lançado todo mês.');}
 window.deleteFixed=function(id){showPopup({icon:'🗑️',title:'Remover gasto fixo',msg:'Deseja remover este gasto fixo?',btns:[{label:'Cancelar',style:'ghost'},{label:'Remover',style:'danger',action:()=>{S.fixedExpenses=S.fixedExpenses.filter(f=>f.id!==id);save();renderFixedList();toast('Gasto fixo removido');}}]});};
 
 // ── TUTORIAL ──────────────────────────────────────────────────
