@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gastometro-v3';
+const CACHE_NAME = 'gastometro-v4';
 const urlsToCache = [
   '/gastometro/',
   '/gastometro/index.html',
