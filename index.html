@@ -255,9 +255,10 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 
 <!-- SPLASH -->
 <div id="splash">
-  <div class="splash-logo"><img src="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Money%20with%20wings/3D/money_with_wings_3d.png" style="width:90px;height:90px"/></div>
+  <div class="splash-logo"><img src="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Money%20with%20wings/3D/money_with_wings_3d.png" style="width:100px;height:100px"/></div>
   <div class="splash-title">GastôMetro</div>
-  <div class="splash-sub">Carregando...</div>
+  <div class="splash-sub">Controle seus gastos com inteligência</div>
+  <div style="font-size:13px;color:rgba(255,255,255,.6);margin:16px 0 8px">v1.0.0</div>
   <div><span class="splash-dot"></span><span class="splash-dot"></span><span class="splash-dot"></span></div>
 </div>
 
@@ -430,6 +431,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
         <div class="set-row"><div class="set-label">Renda Mensal</div><button class="btn-ghost" onclick="editRenda()" id="renda-btn">R$ 0,00</button></div>
         <div class="set-row"><div class="set-label">Tema Escuro</div><button class="toggle" id="theme-toggle" onclick="toggleTheme()"></button></div>
         <div class="set-row"><div class="set-label">Ver tutorial novamente</div><button onclick="startTutorial()" style="background:none;border:none;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">Ver</button></div>
+      <div style="text-align:center;padding:16px 0 4px;font-size:11px;color:var(--text3)">GastôMetro v1.0.0</div>
       </div>
     </div>
 
@@ -869,7 +871,9 @@ function render(){
   if(typeof Chart!=='undefined')try{barChart=new Chart(document.getElementById('chart-barras'),{type:'bar',data:{labels:months6.map(x=>x.label),datasets:[{label:'Gastos',data:months6.map(x=>getTotalMonth(x.y,x.m)),backgroundColor:months6.map(x=>x.y===y&&x.m===m?'#2a78d6':(isDark?'#334155':'#e2e8f0')),borderRadius:6,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.raw)}}},spaces:{y:{grid:{color:isDark?'#1e293b':'#f1f5f9'},ticks:{color:isDark?'#94a3b8':'#64748b',callback:v=>fmtS(v),font:{size:10}}},x:{grid:{display:false},ticks:{color:isDark?'#94a3b8':'#64748b',font:{size:11}}}}}});}catch(e){}
   const histEl=document.getElementById('hist-list');
   const hms=[];for(let i=0;i<6;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);hms.push({y:d.getFullYear(),m:d.getMonth()});}
-  histEl.innerHTML=hms.map((hm,i)=>{const t=getTotalMonth(hm.y,hm.m);const prev=i<hms.length-1?getTotalMonth(hms[i+1].y,hms[i+1].m):null;let diffHtml='';if(prev!==null&&prev>0){const diff=((t-prev)/prev*100).toFixed(0);const up=t>prev;diffHtml=`<div class="hist-diff ${up?'up':'down'}">${up?'+':'-'}${Math.abs(diff)}%</div>`;}const cnt=getMonthTx(hm.y,hm.m).length;return`<div class="hist-row"><div class="hist-row-top"><div class="hist-row-name">${MONTHS[hm.m]} ${hm.y}${hm.y===y&&hm.m===m?' (Atual)':''}</div><div class="hist-row-val">${fmt(t)}</div></div><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:12px;color:var(--text3)">${cnt} lancamento${cnt!==1?'s':''}</div>${diffHtml}</div></div>`;}).join('');
+  const hmsFiltrados=hms.filter(hm=>getTotalMonth(hm.y,hm.m)>0);
+  if(!hmsFiltrados.length){histEl.innerHTML='<div class="empty"><div class="empty-text">Nenhum gasto registrado ainda.</div></div>';return;}
+  histEl.innerHTML=hmsFiltrados.map((hm,i)=>{const t=getTotalMonth(hm.y,hm.m);const prev=i<hmsFiltrados.length-1?getTotalMonth(hmsFiltrados[i+1].y,hmsFiltrados[i+1].m):null;let diffHtml='';if(prev!==null&&prev>0){const diff=((t-prev)/prev*100).toFixed(0);const up=t>prev;diffHtml=`<div class="hist-diff ${up?'up':'down'}">${up?'+':'-'}${Math.abs(diff)}%</div>`;}const cnt=getMonthTx(hm.y,hm.m).length;return`<div class="hist-row"><div class="hist-row-top"><div class="hist-row-name">${MONTHS[hm.m]} ${hm.y}${hm.y===y&&hm.m===m?' (Atual)':''}</div><div class="hist-row-val">${fmt(t)}</div></div><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:12px;color:var(--text3)">${cnt} lançamento${cnt!==1?'s':''}</div>${diffHtml}</div></div>`;}).join('');
 }
 
 function getMonthTx(y,m){return S.transactions.filter(t=>{const d=new Date(t.date+'T00:00:00');return d.getFullYear()===y&&d.getMonth()===m;});}
@@ -995,8 +999,11 @@ window.sairAdmin=sairAdmin;
 
 // ── BOOT ─────────────────────────────────────────────────────
 async function init(){
-  // Carrega Chart.js
-  await new Promise(res=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';s.onload=res;s.onerror=res;document.head.appendChild(s);});
+  // Carrega Chart.js com delay mínimo no splash
+  const [_] = await Promise.all([
+    new Promise(res=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';s.onload=res;s.onerror=res;document.head.appendChild(s);}),
+    new Promise(res=>setTimeout(res,1800))
+  ]);
   document.getElementById('splash').classList.add('hidden');
   if(isAdmin){initAdmin();return;}
   // Auto-login
