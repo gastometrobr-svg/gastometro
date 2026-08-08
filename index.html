@@ -568,7 +568,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
     <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Lançado automaticamente todo mês na virada.</div>
     <div class="field"><label>Valor (R$)</label><input type="number" id="fx-valor" class="amt-input" placeholder="0,00" inputmode="decimal" step="0.01" min="0"/></div>
     <div class="field"><label>Descrição</label><input type="text" id="fx-desc" placeholder="Ex: Aluguel, Academia, Internet"/></div>
-    
+    <div class="field"><label>Mês de início</label><input type="month" id="fx-inicio"/></div>
     <button class="submit-btn" onclick="saveFixedExpense()">Salvar gasto fixo</button>
   </div>
 </div>
@@ -582,7 +582,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
     <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Lançado automaticamente a cada mês até acabar as parcelas.</div>
     <div class="field"><label>Descrição</label><input type="text" id="parc-desc" placeholder="Ex: Empréstimo Banco, Financiamento"/></div>
     <div class="field"><label>Número de parcelas</label><input type="number" id="parc-total" placeholder="Ex: 12" inputmode="numeric" min="1" max="360" style="font-size:20px;font-weight:700;text-align:center" oninput="gerarCamposParcelas()"/></div>
-    <input type="hidden" id="parc-inicio"/>
+    <div class="field"><label>Mês de início</label><input type="month" id="parc-inicio"/></div>
     <div id="parc-valores-container"></div>
     <button class="submit-btn" onclick="salvarParcelado()">Salvar parcelado</button>
   </div>
@@ -1038,14 +1038,15 @@ function getMonthTx(y,m){
   const real=S.transactions.filter(t=>{const d=new Date(t.date+'T00:00:00');return d.getFullYear()===y&&d.getMonth()===m;});
   // Para meses futuros, adicionar gastos fixos como preview (agendados)
   const now=new Date();
-  const isFuture=(y>now.getFullYear())||(y===now.getFullYear()&&m>now.getMonth());
+  const isFuture=(y>now.getFullYear())||(y===now.getFullYear()&&m>=now.getMonth());
   if(isFuture&&S.fixedExpenses&&S.fixedExpenses.length){
     const dateStr=y+'-'+String(m+1).padStart(2,'0')+'-01';
     const idsJaLancados=new Set(real.filter(t=>t.fixed||t.parceladoId).map(t=>t.parceladoId?String(t.parceladoId):t.desc));
     S.fixedExpenses.forEach(fe=>{
       const ym=dateStr.substring(0,7);
+      if(fe.inicioYM&&ym<fe.inicioYM)return; // ainda não chegou no mês de início
       if(fe.skippedMonths&&fe.skippedMonths.includes(ym))return;
-      if(idsJaLancados.has(String(fe.id))||idsJaLancados.has(fe.desc))return; // já foi lançado como transação real // pulou este mês
+      if(idsJaLancados.has(String(fe.id))||idsJaLancados.has(fe.desc))return;
       if(fe.parcelado){
         if((fe.parcelaAtual||0)<fe.totalParcelas){
           real.push({id:'preview_'+fe.id,desc:`${fe.desc} (${(fe.parcelaAtual||0)+1}/${fe.totalParcelas})`,cat:fe.cat||'outros',val:fe.valores?fe.valores[fe.parcelaAtual||0]:fe.val,date:dateStr,paid:false,preview:true});
@@ -1142,13 +1143,32 @@ function confirmarLimpar(){showPopup({icon:'⚠️',title:'Limpar dados',msg:'Ap
 // ── GASTOS FIXOS ──────────────────────────────────────────────
 let fxSelectedCat='contas',fxSelectedPayment='dinheiro';
 function renderFixedList(){const el=document.getElementById('fixed-list');if(!el)return;if(!S.fixedExpenses||!S.fixedExpenses.length){el.innerHTML='<div class="empty-fixed">Nenhum gasto fixo cadastrado</div>';return;}const payLabelsF={credito:'Crédito',debito:'Débito',pix:'Pix',dinheiro:'Dinheiro'};el.innerHTML=S.fixedExpenses.map(fe=>{const payLbl=payLabelsF[fe.pay]||'';return`<div class="fixed-item"><div class="fixed-item-info"><div class="fixed-item-desc">${fe.desc}</div>${payLbl?`<div class="fixed-item-meta">${payLbl}</div>`:''}</div><div class="fixed-item-val">${fmt(fe.val)}</div><button class="fixed-item-del" onclick="window.deleteFixed('${fe.id}')">x</button></div>`;}).join('');}
-function openFixedModal(){fxSelectedCat='contas';fxSelectedPayment='dinheiro';document.getElementById('fx-valor').value='';document.getElementById('fx-desc').value='';renderFxCatGrid();document.getElementById('fixed-modal-bg').classList.remove('hidden');}
+function openFixedModal(){fxSelectedCat='contas';fxSelectedPayment='dinheiro';document.getElementById('fx-valor').value='';document.getElementById('fx-desc').value='';document.getElementById('fx-inicio').value=S.currentYear+'-'+String(S.currentMonth+1).padStart(2,'0');renderFxCatGrid();document.getElementById('fixed-modal-bg').classList.remove('hidden');}
 function closeFixedModalBg(e){if(e.target===document.getElementById('fixed-modal-bg'))closeFixedModal();}
 function closeFixedModal(){document.getElementById('fixed-modal-bg').classList.add('hidden');}
 function renderFxCatGrid(){}
 window.fxSelectCat=function(id){fxSelectedCat=id;renderFxCatGrid();};
 function selectFixedPayment(v){fxSelectedPayment=v;}
-function saveFixedExpense(){const val=parseFloat(document.getElementById('fx-valor').value);const desc=document.getElementById('fx-desc').value.trim();if(!val||val<=0){toast('Informe o valor');return;}if(!desc){toast('Informe a descricao');return;}if(!S.fixedExpenses)S.fixedExpenses=[];S.fixedExpenses.push({id:Date.now()+'',desc,cat:fxSelectedCat,val,pay:fxSelectedPayment});save();closeFixedModal();renderFixedList();toast('Gasto fixo salvo! Será lançado todo mês.');}
+function saveFixedExpense(){
+  const val=parseFloat(document.getElementById('fx-valor').value);
+  const desc=document.getElementById('fx-desc').value.trim();
+  const inicio=document.getElementById('fx-inicio').value;
+  if(!val||val<=0){toast('Informe o valor');return;}
+  if(!desc){toast('Informe a descricao');return;}
+  if(!inicio){toast('Informe o mês de início');return;}
+  if(!S.fixedExpenses)S.fixedExpenses=[];
+  const feId=Date.now()+'';
+  S.fixedExpenses.push({id:feId,desc,cat:fxSelectedCat,val,pay:fxSelectedPayment,inicioYM:inicio});
+  // Criar transação real para o mês de início (se já chegou ou é o mês atual)
+  const now=new Date();
+  const nowYM=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  if(inicio<=nowYM){
+    const dateStr=inicio+'-01';
+    S.transactions.push({id:uid(),desc,cat:fxSelectedCat,val,date:dateStr,paid:false,fixed:true});
+  }
+  save();closeFixedModal();renderFixedList();render();
+  toast('Gasto fixo salvo! Será lançado todo mês.');
+}
 window.deleteFixed=function(id){showPopup({icon:'🗑️',title:'Remover gasto fixo',msg:'Deseja remover este gasto fixo?',btns:[{label:'Cancelar',style:'ghost'},{label:'Remover',style:'danger',action:()=>{S.fixedExpenses=S.fixedExpenses.filter(f=>f.id!==id);save();renderFixedList();toast('Gasto fixo removido');}}]});};
 
 window.deletarPreview=function(fid,dateStr){
@@ -1230,8 +1250,8 @@ function abrirModalParcelado(){
   document.getElementById('parc-desc').value='';
   document.getElementById('parc-total').value='';
   document.getElementById('parc-valores-container').innerHTML='';
-  const now=new Date();
-  document.getElementById('parc-inicio').value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  // Usa o mês que o usuário está visualizando, não o mês atual
+  document.getElementById('parc-inicio').value=S.currentYear+'-'+String(S.currentMonth+1).padStart(2,'0');
   document.getElementById('modal-parcelas-bg').classList.remove('hidden');
 }
 function gerarCamposParcelas(){
@@ -1293,7 +1313,9 @@ function insertFixedExpenses(){
   const y=S.currentYear,m=S.currentMonth;
   const dateStr=y+'-'+String(m+1).padStart(2,'0')+'-01';
   const toRemove=[];
+  const ym=dateStr.substring(0,7);
   S.fixedExpenses.forEach(fe=>{
+    if(fe.inicioYM&&ym<fe.inicioYM)return; // ainda não chegou no mês de início
     if(fe.parcelado){
       if(fe.parcelaAtual>=fe.totalParcelas){toRemove.push(fe.id);return;}
       const val=fe.valores?fe.valores[fe.parcelaAtual]:fe.val;
