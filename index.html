@@ -912,13 +912,6 @@ function checkMonthRollover(){
     setTimeout(()=>toast('Novo mês iniciado! Gastos fixos lançados.'),600);
   }
 }
-function insertFixedExpenses(){
-  if(!S.fixedExpenses||!S.fixedExpenses.length)return;
-  const y=S.currentYear,m=S.currentMonth;
-  const dateStr=y+'-'+String(m+1).padStart(2,'0')+'-01';
-  S.fixedExpenses.forEach(fe=>{S.transactions.push({id:Date.now()+Math.random(),desc:fe.desc,cat:fe.cat,val:fe.val,date:dateStr,pay:fe.pay,paid:false,fixed:true});});
-}
-
 // ── RENDER ───────────────────────────────────────────────────
 function render(){
   const y=S.currentYear,m=S.currentMonth;
@@ -1134,7 +1127,6 @@ function salvarParcelado(){
   toast(`Parcelado salvo! ${parcelaAtual} de ${total} parcelas lançadas.`);
 }
 // Ao inserir gastos fixos na virada, incluir parcelados
-const _origInsert=insertFixedExpenses;
 function insertFixedExpenses(){
   if(!S.fixedExpenses||!S.fixedExpenses.length)return;
   const y=S.currentYear,m=S.currentMonth;
@@ -1158,10 +1150,14 @@ window.salvarParcelado=salvarParcelado;
 
 // ── BOOT ─────────────────────────────────────────────────────
 async function init(){
-  const splashMin = new Promise(res=>setTimeout(res,2000));
-  // Carrega Chart.js
-  await new Promise(res=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';s.onload=res;s.onerror=res;document.head.appendChild(s);});
-  if(isAdmin){await splashMin;initAdmin();return;}
+  // Carrega Chart.js e delay do splash em paralelo
+  await Promise.all([
+    new Promise(res=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';s.onload=res;s.onerror=res;document.head.appendChild(s);}),
+    new Promise(res=>setTimeout(res,2000))
+  ]);
+  // Esconde splash
+  document.getElementById('splash').classList.add('hidden');
+  if(isAdmin){initAdmin();return;}
   // Auto-login
   try{
     const codigoSalvo=localStorage.getItem('gmLogado');
@@ -1171,15 +1167,10 @@ async function init(){
         const u=snap.data();
         usuarioLogado=u;
         S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
-        await splashMin;
-        document.getElementById('splash').classList.add('hidden');
-        abrirApp();
-        return;
+        abrirApp();return;
       }
     }
   }catch(e){console.warn('Auto-login falhou:',e);}
-  await splashMin;
-  document.getElementById('splash').classList.add('hidden');
   document.getElementById('tela-login').classList.remove('hidden');
 }
 init();
