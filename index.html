@@ -1189,48 +1189,51 @@ async function init(){
     new Promise(res=>setTimeout(res,2000))
   ]);
   if(isAdmin){document.getElementById('splash').classList.add('hidden');initAdmin();return;}
-  // Auto-login — tenta cache local primeiro, Firebase como fallback
+
+  // ── AUTO-LOGIN: try-catch APENAS na leitura dos dados, nunca no render ──
+  let usuarioDados=null;
+  let codigoSalvo=null;
   try{
-    const codigoSalvo=localStorage.getItem('gmLogado');
+    codigoSalvo=localStorage.getItem('gmLogado');
     if(codigoSalvo){
-      // Tentar cache local primeiro (instantâneo)
       const cacheStr=localStorage.getItem('gmCache_'+codigoSalvo);
       if(cacheStr){
-        const u=JSON.parse(cacheStr);
-        usuarioLogado=u;
-        S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
-        document.getElementById('splash').classList.add('hidden');
-        abrirApp();
-        // Atualizar dados do Firebase em background e renovar cache local
-        getDoc(doc(db,'gastometro_usuarios',codigoSalvo)).then(snap=>{
-          if(snap.exists()){
-            const fu=snap.data();
-            S.renda=fu.renda||0;S.transactions=fu.transactions||[];
-            S.fixedExpenses=fu.fixedExpenses||[];S.lastYM=fu.lastYM||'';
-            // Renova o cache local com dados frescos do Firebase
-            localStorage.setItem('gmCache_'+codigoSalvo,JSON.stringify({
-              nome:fu.nome,codigo:fu.codigo,senhaHash:fu.senhaHash,
-              primeiroAcesso:false,renda:fu.renda||0,
-              transactions:fu.transactions||[],fixedExpenses:fu.fixedExpenses||[],
-              lastYM:fu.lastYM||'',theme:fu.theme||S.theme
-            }));
-            render();renderFixedList();
-          }
-        }).catch(()=>{});
-        return;
-      }
-      // Sem cache local, buscar do Firebase
-      const snap=await getDoc(doc(db,'gastometro_usuarios',codigoSalvo));
-      if(snap.exists()){
-        const u=snap.data();
-        usuarioLogado=u;
-        S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
-        document.getElementById('splash').classList.add('hidden');
-        abrirApp();return;
+        usuarioDados=JSON.parse(cacheStr);
+      } else {
+        // Sem cache local, buscar do Firebase
+        const snap=await getDoc(doc(db,'gastometro_usuarios',codigoSalvo));
+        if(snap.exists()) usuarioDados=snap.data();
       }
     }
-  }catch(e){console.warn('Auto-login falhou:',e);}
+  }catch(e){console.warn('Erro ao ler dados de login:',e);}
+
+  // Esconde splash sempre
   document.getElementById('splash').classList.add('hidden');
+
+  if(usuarioDados){
+    // Login bem-sucedido — render fica FORA do try-catch
+    usuarioLogado=usuarioDados;
+    S={renda:usuarioDados.renda||0,transactions:usuarioDados.transactions||[],fixedExpenses:usuarioDados.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:usuarioDados.lastYM||'',theme:usuarioDados.theme||'light'};
+    abrirApp();
+    // Sincroniza com Firebase em background e renova cache local
+    if(codigoSalvo){
+      getDoc(doc(db,'gastometro_usuarios',codigoSalvo)).then(snap=>{
+        if(snap.exists()){
+          const fu=snap.data();
+          S.renda=fu.renda||0;S.transactions=fu.transactions||[];
+          S.fixedExpenses=fu.fixedExpenses||[];S.lastYM=fu.lastYM||'';
+          localStorage.setItem('gmCache_'+codigoSalvo,JSON.stringify({
+            nome:fu.nome,codigo:fu.codigo,senhaHash:fu.senhaHash,
+            primeiroAcesso:false,renda:fu.renda||0,
+            transactions:fu.transactions||[],fixedExpenses:fu.fixedExpenses||[],
+            lastYM:fu.lastYM||'',theme:fu.theme||S.theme
+          }));
+          render();renderFixedList();
+        }
+      }).catch(()=>{});
+    }
+    return;
+  }
   document.getElementById('tela-login').classList.remove('hidden');
 }
 init();
