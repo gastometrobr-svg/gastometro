@@ -9,7 +9,29 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <title>GastôMetro — Controle de Gastos</title>
 <link rel="manifest" href="manifest.json"/>
-<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{});});}</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      // Verifica atualização a cada 60 segundos
+      setInterval(() => reg.update(), 60000);
+      // Quando novo SW está esperando, recarrega automaticamente
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'activated') {
+            window.location.reload();
+          }
+        });
+      });
+    }).catch(() => {});
+    // Se outro SW assumiu o controle (outro dispositivo atualizou), recarrega
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload();
+    });
+  });
+}
+</script>
 <style>
 :root{
   --primary:#16a34a;--primary-dark:#15803d;--primary-light:#dcfce7;
@@ -241,11 +263,12 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 .popup-msg{font-size:14px;color:var(--text2);line-height:1.5;margin-bottom:20px}
 .popup-input{width:100%;padding:13px 16px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:16px;outline:none;text-align:center;margin-bottom:16px}
 .popup-input:focus{border-color:var(--primary)}
-.popup-btns{display:flex;gap:10px}
-.popup-btn{flex:1;padding:13px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;border:none}
+.popup-btns{display:flex;flex-direction:column;gap:8px}
+.popup-btn{width:100%;padding:13px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;border:none}
 .popup-btn.primary{background:var(--primary);color:#fff}
 .popup-btn.danger{background:#ef4444;color:#fff}
 .popup-btn.ghost{background:var(--surface2);color:var(--text2);border:1.5px solid var(--border)}
+.popup-btn.secondary{background:#dbeafe;color:#1d4ed8;border:1.5px solid #93c5fd}
 
 
 /* ── FOOTER ── */
@@ -450,6 +473,10 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
         <div class="set-row"><div class="set-label">Tema Escuro</div><button class="toggle" id="theme-toggle" onclick="toggleTheme()"></button></div>
         <div class="set-row"><div class="set-label">Ver tutorial novamente</div><button onclick="startTutorial()" style="background:none;border:none;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">Ver</button></div>
       <div style="text-align:center;padding:16px 0 4px;font-size:11px;color:var(--text3)">GastôMetro v1.0.0</div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">Gastos Fixos <button class="btn-primary" style="font-size:12px;padding:6px 12px" onclick="openFixedModal()">+ Adicionar</button></div>
+        <div id="fixed-list" class="fixed-list"></div>
       </div>
     </div>
 
@@ -1002,7 +1029,7 @@ function render(){
   const now=new Date();const months6=[];
   for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months6.push({y:d.getFullYear(),m:d.getMonth(),label:MONTHS_SHORT[d.getMonth()]});}
   const isDark=document.documentElement.getAttribute('data-theme')==='dark';
-  if(typeof Chart!=='undefined')try{barChart=new Chart(document.getElementById('chart-barras'),{type:'bar',data:{labels:months6.map(x=>x.label),datasets:[{label:'Gastos',data:months6.map(x=>getTotalMonth(x.y,x.m)),backgroundColor:months6.map(x=>x.y===y&&x.m===m?'#2a78d6':(isDark?'#334155':'#e2e8f0')),borderRadius:6,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.raw)}}},spaces:{y:{grid:{color:isDark?'#1e293b':'#f1f5f9'},ticks:{color:isDark?'#94a3b8':'#64748b',callback:v=>fmtS(v),font:{size:10}}},x:{grid:{display:false},ticks:{color:isDark?'#94a3b8':'#64748b',font:{size:11}}}}}});}catch(e){}
+  if(typeof Chart!=='undefined')try{barChart=new Chart(document.getElementById('chart-barras'),{type:'bar',data:{labels:months6.map(x=>x.label),datasets:[{label:'Gastos',data:months6.map(x=>getTotalMonth(x.y,x.m)),backgroundColor:months6.map(x=>x.y===y&&x.m===m?'#2a78d6':(isDark?'#334155':'#e2e8f0')),borderRadius:6,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.raw)}}},scales:{y:{grid:{color:isDark?'#1e293b':'#f1f5f9'},ticks:{color:isDark?'#94a3b8':'#64748b',callback:v=>fmtS(v),font:{size:10}}},x:{grid:{display:false},ticks:{color:isDark?'#94a3b8':'#64748b',font:{size:11}}}}}});}catch(e){}
   const histEl=document.getElementById('hist-list');
   const hms=[];for(let i=0;i<6;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);hms.push({y:d.getFullYear(),m:d.getMonth()});}
   const hmsFiltrados=hms.filter(hm=>getTotalMonth(hm.y,hm.m)>0);
@@ -1017,8 +1044,11 @@ function getMonthTx(y,m){
   const isFuture=(y>now.getFullYear())||(y===now.getFullYear()&&m>now.getMonth());
   if(isFuture&&S.fixedExpenses&&S.fixedExpenses.length){
     const dateStr=y+'-'+String(m+1).padStart(2,'0')+'-01';
-    const idsJaLancados=new Set(real.filter(t=>t.fixed||t.parceladoId).map(t=>t.parceladoId||t.desc));
+    const idsJaLancados=new Set(real.filter(t=>t.fixed||t.parceladoId).map(t=>t.parceladoId?String(t.parceladoId):t.desc));
     S.fixedExpenses.forEach(fe=>{
+      const ym=dateStr.substring(0,7);
+      if(fe.skippedMonths&&fe.skippedMonths.includes(ym))return;
+      if(idsJaLancados.has(String(fe.id))||idsJaLancados.has(fe.desc))return; // já foi lançado como transação real // pulou este mês
       if(fe.parcelado){
         if((fe.parcelaAtual||0)<fe.totalParcelas){
           real.push({id:'preview_'+fe.id,desc:`${fe.desc} (${(fe.parcelaAtual||0)+1}/${fe.totalParcelas})`,cat:fe.cat||'outros',val:fe.valores?fe.valores[fe.parcelaAtual||0]:fe.val,date:dateStr,paid:false,preview:true});
@@ -1035,7 +1065,7 @@ function getTotalMonth(y,m){return getMonthTx(y,m).reduce((a,t)=>a+t.val,0);}
 function renderTxList(elId,txs,deletable){
   const el=document.getElementById(elId);
   if(!txs.length){el.innerHTML='<div class="empty"><div class="empty-icon"><img src="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Money%20with%20wings/3D/money_with_wings_3d.png" style="width:56px;height:56px"/></div><div class="empty-text">Nenhum gasto encontrado.<br>Toque no + para adicionar.</div></div>';return;}
-  el.innerHTML=`<div class="tx-list">${txs.map(t=>{const c=getCat(t.cat);const dateStr=new Date(t.date+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});const paidClass=t.paid?'pago':'pendente';const paidLabel=t.paid?'Pago':'Pagar';const strikeStyle=t.paid?'text-decoration:line-through;opacity:.6':'';const isPreview=t.preview===true;if(isPreview){return`<div class="tx"><div class="tx-info"><div class="tx-desc">${t.desc}</div><div class="tx-meta">Gasto fixo</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div></div></div>`;}return`<div class="tx" style="${t.paid?'opacity:.85':''}"><div class="tx-info"><div class="tx-desc" style="${strikeStyle}">${t.desc}</div><div class="tx-meta">${dateStr}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div><button class="tx-paid-btn ${paidClass}" onclick="window.togglePaid('${t.id}')">${paidLabel}</button></div>${deletable?`<button class="tx-del" onclick="window.deletarGasto('${t.id}')">🗑</button>`:''}</div>`;}).join('')}</div>`;
+  el.innerHTML=`<div class="tx-list">${txs.map(t=>{const c=getCat(t.cat);const dateStr=new Date(t.date+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});const paidClass=t.paid?'pago':'pendente';const paidLabel=t.paid?'Pago':'Pagar';const strikeStyle=t.paid?'text-decoration:line-through;opacity:.6':'';const isPreview=t.preview===true;if(isPreview){const fid=t.id.replace('preview_','');return`<div class="tx"><div class="tx-info"><div class="tx-desc">${t.desc}</div><div class="tx-meta">Gasto fixo</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div></div><button class="tx-del" onclick="window.deletarPreview('${fid}','${t.date}')">🗑</button></div>`;}return`<div class="tx" style="${t.paid?'opacity:.85':''}"><div class="tx-info"><div class="tx-desc" style="${strikeStyle}">${t.desc}</div><div class="tx-meta">${dateStr}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div><button class="tx-paid-btn ${paidClass}" onclick="window.togglePaid('${t.id}')">${paidLabel}</button></div>${deletable?`<button class="tx-del" onclick="window.deletarGasto('${t.id}')">🗑</button>`:''}</div>`;}).join('')}</div>`;
 }
 
 window.togglePaid=function(id){
@@ -1106,6 +1136,21 @@ window.fxSelectCat=function(id){fxSelectedCat=id;renderFxCatGrid();};
 function selectFixedPayment(v){fxSelectedPayment=v;}
 function saveFixedExpense(){const val=parseFloat(document.getElementById('fx-valor').value);const desc=document.getElementById('fx-desc').value.trim();if(!val||val<=0){toast('Informe o valor');return;}if(!desc){toast('Informe a descricao');return;}if(!S.fixedExpenses)S.fixedExpenses=[];S.fixedExpenses.push({id:Date.now()+'',desc,cat:fxSelectedCat,val,pay:fxSelectedPayment});save();closeFixedModal();renderFixedList();toast('Gasto fixo salvo! Será lançado todo mês.');}
 window.deleteFixed=function(id){showPopup({icon:'🗑️',title:'Remover gasto fixo',msg:'Deseja remover este gasto fixo?',btns:[{label:'Cancelar',style:'ghost'},{label:'Remover',style:'danger',action:()=>{S.fixedExpenses=S.fixedExpenses.filter(f=>f.id!==id);save();renderFixedList();toast('Gasto fixo removido');}}]});};
+
+window.deletarPreview=function(fid,dateStr){
+  const ym=dateStr.substring(0,7); // ex: '2026-09'
+  showPopup({icon:'🗑️',title:'Excluir gasto fixo',msg:'Excluir "'+((S.fixedExpenses.find(f=>String(f.id)===String(fid))||{}).desc||'este gasto')+'"?',btns:[
+    {label:'Cancelar',style:'ghost'},
+    {label:'Só '+new Date(ym+'-02').toLocaleDateString('pt-BR',{month:'long'}),style:'secondary',action:()=>{
+      const fe=S.fixedExpenses.find(f=>String(f.id)===String(fid));
+      if(fe){if(!fe.skippedMonths)fe.skippedMonths=[];fe.skippedMonths.push(ym);save();render();renderFixedList();toast('Removido só para este mês');}
+    }},
+    {label:'Todos os meses',style:'danger',action:()=>{
+      S.fixedExpenses=S.fixedExpenses.filter(f=>String(f.id)!==String(fid));
+      save();render();renderFixedList();toast('Gasto fixo removido de todos os meses');
+    }}
+  ]});
+};
 
 // ── TUTORIAL ──────────────────────────────────────────────────
 const TUT_STEPS=[
