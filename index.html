@@ -616,7 +616,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 <script type="module">
 // ── FIREBASE ────────────────────────────────────────────────
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // !! SUBSTITUA PELAS SUAS CREDENCIAIS DO FIREBASE !!
 const firebaseConfig = {
@@ -663,8 +663,6 @@ async function sha256(str){
 
 // ── STATE ───────────────────────────────────────────────────
 let usuarioLogado=null;
-let _snapshotUnsub=null;
-let _saving=false;
 let S={renda:0,transactions:[],fixedExpenses:[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:'',theme:'light'};
 let pizzaChart=null,barChart=null;
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
@@ -824,7 +822,7 @@ async function fazerLogin(){
       document.getElementById('tela-login').classList.add('hidden');
       document.getElementById('tela-troca-senha').classList.remove('hidden');
     } else {
-      startSync(u.codigo);abrirApp();
+      abrirApp();
     }
   }catch(e){document.getElementById('login-erro').textContent='Erro de conexao. Tente novamente.';document.getElementById('login-loading').textContent='';}
 }
@@ -839,7 +837,7 @@ async function trocarSenha(){
   await updateDoc(doc(db,'gastometro_usuarios',usuarioLogado.codigo),{senhaHash:h,primeiroAcesso:false});
   usuarioLogado.senhaHash=h;usuarioLogado.primeiroAcesso=false;
   document.getElementById('tela-troca-senha').classList.add('hidden');
-  startSync(usuarioLogado.codigo);abrirApp();
+  abrirApp();
   toast('Senha criada com sucesso!');
 }
 
@@ -889,34 +887,13 @@ function abrirApp(){
 async function save(){
   if(!usuarioLogado)return;
   try{
-    _saving=true;
     await updateDoc(doc(db,'gastometro_usuarios',usuarioLogado.codigo),{
       renda:S.renda,transactions:S.transactions,fixedExpenses:S.fixedExpenses,lastYM:S.lastYM,theme:S.theme
     });
-    localStorage.setItem('gmCache_'+usuarioLogado.codigo,JSON.stringify({renda:S.renda,transactions:S.transactions,fixedExpenses:S.fixedExpenses,lastYM:S.lastYM,theme:S.theme}));
   }catch(e){console.warn('Erro ao salvar:',e);}
-  finally{setTimeout(()=>{_saving=false;},5000);}
 }
 
-function startSync(codigo){
-  if(_snapshotUnsub)_snapshotUnsub();
-  _snapshotUnsub=onSnapshot(doc(db,'gastometro_usuarios',codigo),(snap)=>{
-    if(!snap.exists()||!usuarioLogado)return;
-    if(_saving){return;}
-    const u=snap.data();
-    // Só atualiza se os dados do Firebase forem diferentes dos locais
-    const remoteStr=JSON.stringify({t:u.transactions,f:u.fixedExpenses,r:u.renda});
-    const localStr=JSON.stringify({t:S.transactions,f:S.fixedExpenses,r:S.renda});
-    if(remoteStr===localStr)return;
-    S.renda=u.renda||0;
-    S.transactions=u.transactions||[];
-    S.fixedExpenses=u.fixedExpenses||[];
-    S.lastYM=u.lastYM||'';
-    if(u.theme&&u.theme!==S.theme){S.theme=u.theme;if(u.theme==='dark'){document.documentElement.setAttribute('data-theme','dark');}else{document.documentElement.removeAttribute('data-theme');}}
-    render();
-    renderFixedList();
-  },(e)=>console.warn('Sync error:',e));
-}
+
 
 // ── VIRADA DE MES ─────────────────────────────────────────────
 function checkMonthRollover(){
@@ -1206,7 +1183,6 @@ async function init(){
         usuarioLogado=u;
         S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
         document.getElementById('splash').classList.add('hidden');
-        startSync(u.codigo);
         abrirApp();return;
       }
     }

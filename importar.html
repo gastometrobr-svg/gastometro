@@ -20,7 +20,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 <body>
 <div class="card">
   <h1>Importar Dados para MT6L8G</h1>
-  <p>Importa todos os gastos fixos e parcelados a partir de Setembro 2026.</p>
+  <p>Limpa todos os dados antigos e importa os gastos fixos e parcelados a partir de Setembro 2026.</p>
   <button id="btn" onclick="importar()">Importar dados agora</button>
   <div class="log" id="log">Aguardando...</div>
 </div>
@@ -52,71 +52,70 @@ window.importar = async function(){
   document.getElementById('log').innerHTML = '';
   log('Iniciando importação...');
 
-  const rid = () => Date.now() + Math.random();
+  // Gera ID único
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
 
   const fixedExpenses = [
-    // GASTOS FIXOS (repetem todo mês indefinidamente)
+    // GASTOS FIXOS
     {id:'fix_das_cnpj', desc:'Das CNPJ', cat:'outros', val:86.05, parcelado:false},
     {id:'fix_alarme', desc:'Alarme Carro Ubersat', cat:'outros', val:59.90, parcelado:false},
     {id:'fix_contas_casa', desc:'Contas de Casa', cat:'outros', val:100.00, parcelado:false},
     {id:'fix_tiago', desc:'Tiago', cat:'outros', val:100.00, parcelado:false},
     // PARCELADOS FIXOS
-    {id:'parc_jo_calcados', desc:'Jo Calçados', cat:'outros', valores:[203.63,203.63,203.63,203.63], parcelado:true, totalParcelas:4, parcelaAtual:0, inicioYM:'2026-09'},
-    {id:'parc_uniessa', desc:'Faculdade Uniessa', cat:'outros', valores:[403.29,403.29,403.29,403.29], parcelado:true, totalParcelas:4, parcelaAtual:0, inicioYM:'2026-09'},
-    {id:'parc_bv_emp', desc:'Empréstimo BV', cat:'outros', valores:Array(29).fill(1190.13), parcelado:true, totalParcelas:29, parcelaAtual:0, inicioYM:'2026-09'},
-    {id:'parc_simplic', desc:'Empréstimo Simplic', cat:'outros', valores:[909.42,909.42,909.42,909.42], parcelado:true, totalParcelas:4, parcelaAtual:0, inicioYM:'2026-09'},
-    {id:'parc_picpay', desc:'Picpay Crédito', cat:'outros', valores:[254.61,254.62], parcelado:true, totalParcelas:2, parcelaAtual:0, inicioYM:'2026-09'},
-    {id:'parc_supersim', desc:'Super Sim', cat:'outros', valores:[244.84,244.84], parcelado:true, totalParcelas:2, parcelaAtual:0, inicioYM:'2026-09'},
-    {id:'parc_nubank_emp', desc:'Empréstimo Nubank', cat:'outros', valores:[337.04,337.04,337.04,337.04], parcelado:true, totalParcelas:4, parcelaAtual:0, inicioYM:'2026-09'},
+    {id:'parc_jo_calcados', desc:'Jo Calçados', cat:'outros', valores:[203.63,203.63,203.63,203.63], parcelado:true, totalParcelas:4, parcelaAtual:1, inicioYM:'2026-09'},
+    {id:'parc_uniessa', desc:'Faculdade Uniessa', cat:'outros', valores:[403.29,403.29,403.29,403.29], parcelado:true, totalParcelas:4, parcelaAtual:1, inicioYM:'2026-09'},
+    {id:'parc_bv_emp', desc:'Empréstimo BV', cat:'outros', valores:Array(29).fill(1190.13), parcelado:true, totalParcelas:29, parcelaAtual:1, inicioYM:'2026-09'},
+    {id:'parc_simplic', desc:'Empréstimo Simplic', cat:'outros', valores:[909.42,909.42,909.42,909.42], parcelado:true, totalParcelas:4, parcelaAtual:1, inicioYM:'2026-09'},
+    {id:'parc_picpay', desc:'Picpay Crédito', cat:'outros', valores:[254.61,254.62], parcelado:true, totalParcelas:2, parcelaAtual:1, inicioYM:'2026-09'},
+    {id:'parc_supersim', desc:'Super Sim', cat:'outros', valores:[244.84,244.84], parcelado:true, totalParcelas:2, parcelaAtual:1, inicioYM:'2026-09'},
+    {id:'parc_nubank_emp', desc:'Empréstimo Nubank', cat:'outros', valores:[337.04,337.04,337.04,337.04], parcelado:true, totalParcelas:4, parcelaAtual:1, inicioYM:'2026-09'},
     // PARCELADOS VARIÁVEIS
-    {id:'parc_cred_nubank', desc:'Crédito Nubank', cat:'outros', valores:[406.02,406.02,406.02,406.02,355.59,282.89,188.64,188.64,188.64,188.64], parcelado:true, totalParcelas:10, parcelaAtual:0, inicioYM:'2026-09'},
-    {id:'parc_itau1', desc:'Crédito Itaú 1', cat:'outros', valores:[204.87,179.87,179.87,179.87], parcelado:true, totalParcelas:4, parcelaAtual:0, inicioYM:'2026-09'},
-    {id:'parc_itau2', desc:'Crédito Itaú 2', cat:'outros', valores:[214.84,214.84,214.84,214.84,214.84,124.84,124.84,41.51,38.33], parcelado:true, totalParcelas:9, parcelaAtual:0, inicioYM:'2026-09'},
-    {id:'parc_caixa', desc:'Crédito Caixa', cat:'outros', valores:[113.15,113.15,113.15,98.00,96.25], parcelado:true, totalParcelas:5, parcelaAtual:0, inicioYM:'2026-09'},
-    {id:'parc_mercado', desc:'Mercado Pago', cat:'outros', valores:[159.95,142.57,142.57,142.57,142.57,142.57,142.57,142.57], parcelado:true, totalParcelas:8, parcelaAtual:0, inicioYM:'2026-09'},
-    {id:'parc_cred_bv', desc:'Crédito BV', cat:'outros', valores:[174.91,174.91,174.91,148.54], parcelado:true, totalParcelas:4, parcelaAtual:0, inicioYM:'2026-09'},
-    {id:'parc_inter', desc:'Crédito Inter', cat:'outros', valores:[493.37,493.37,493.37,493.37,310.04,310.04,103.08,72.08,72.08,72.08], parcelado:true, totalParcelas:10, parcelaAtual:0, inicioYM:'2026-09'},
+    {id:'parc_cred_nubank', desc:'Crédito Nubank', cat:'outros', valores:[406.02,406.02,406.02,406.02,355.59,282.89,188.64,188.64,188.64,188.64], parcelado:true, totalParcelas:10, parcelaAtual:1, inicioYM:'2026-09'},
+    {id:'parc_itau1', desc:'Crédito Itaú 1', cat:'outros', valores:[204.87,179.87,179.87,179.87], parcelado:true, totalParcelas:4, parcelaAtual:1, inicioYM:'2026-09'},
+    {id:'parc_itau2', desc:'Crédito Itaú 2', cat:'outros', valores:[214.84,214.84,214.84,214.84,214.84,124.84,124.84,41.51,38.33], parcelado:true, totalParcelas:9, parcelaAtual:1, inicioYM:'2026-09'},
+    {id:'parc_caixa', desc:'Crédito Caixa', cat:'outros', valores:[113.15,113.15,113.15,98.00,96.25], parcelado:true, totalParcelas:5, parcelaAtual:1, inicioYM:'2026-09'},
+    {id:'parc_mercado', desc:'Mercado Pago', cat:'outros', valores:[159.95,142.57,142.57,142.57,142.57,142.57,142.57,142.57], parcelado:true, totalParcelas:8, parcelaAtual:1, inicioYM:'2026-09'},
+    {id:'parc_cred_bv', desc:'Crédito BV', cat:'outros', valores:[174.91,174.91,174.91,148.54], parcelado:true, totalParcelas:4, parcelaAtual:1, inicioYM:'2026-09'},
+    {id:'parc_inter', desc:'Crédito Inter', cat:'outros', valores:[493.37,493.37,493.37,493.37,310.04,310.04,103.08,72.08,72.08,72.08], parcelado:true, totalParcelas:10, parcelaAtual:1, inicioYM:'2026-09'},
   ];
 
-  // Gerar transações de setembro (parcela 1 de cada)
+  // Gerar transações de setembro com IDs únicos
   const transactions = [];
   const dateSet = '2026-09-01';
 
   fixedExpenses.forEach(fe => {
     if(fe.parcelado){
       transactions.push({
-        id: rid(),
+        id: uid(),
         desc: `${fe.desc} (1/${fe.totalParcelas})`,
-        cat: 'outros',
-        val: fe.valores[0],
-        date: dateSet,
-        paid: false,
-        parceladoId: fe.id
+        cat: 'outros', val: fe.valores[0],
+        date: dateSet, paid: false, parceladoId: fe.id
       });
-      fe.parcelaAtual = 1; // marcando que setembro já foi lançado
     } else {
       transactions.push({
-        id: rid(),
+        id: uid(),
         desc: fe.desc,
-        cat: 'outros',
-        val: fe.val,
-        date: dateSet,
-        paid: false,
-        fixed: true
+        cat: 'outros', val: fe.val,
+        date: dateSet, paid: false, fixed: true
       });
     }
   });
 
   try {
     log(`Salvando ${fixedExpenses.length} gastos fixos/parcelados...`);
-    log(`Salvando ${transactions.length} transações de setembro/2026...`);
+    log(`Salvando ${transactions.length} transações de Setembro/2026...`);
+
+    // lastYM = '2026-8' significa que setembro (mês 8 no JS) já foi processado
+    // Isso evita que o app crie transações de agosto ao abrir
     await updateDoc(doc(db, 'gastometro_usuarios', 'MT6L8G'), {
       fixedExpenses,
       transactions,
-      lastYM: '2026-8',
+      lastYM: '2026-8',  // setembro em JS (0-indexado)
       renda: 0
     });
+
     log('✓ Dados importados com sucesso!', 'ok');
+    log('✓ lastYM definido como setembro (evita duplicatas)', 'ok');
     log('Abra o app e navegue até Setembro 2026.', 'ok');
     btn.textContent = 'Importado com sucesso!';
   } catch(e) {
