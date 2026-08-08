@@ -145,7 +145,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 .hist-diff.up{color:var(--red)}
 .hist-diff.down{color:var(--green)}
 .fab{position:fixed;bottom:84px;right:20px;width:58px;height:58px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(22,163,74,.35);display:flex;align-items:center;justify-content:center;z-index:100;transition:transform .15s}
-.fab:active{transform:scale(.92)}.fab:focus{outline:none}
+.fab:active{transform:scale(.92)}.fab:focus{outline:none}.fab:focus{outline:none}
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:100}
 .bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 14px;background:none;border:none;cursor:pointer;font-size:10px;font-weight:600;color:var(--text3)}
 .bnav-btn.active{color:var(--primary)}
@@ -665,7 +665,7 @@ async function sha256(str){
 }
 
 // ── STATE ───────────────────────────────────────────────────
-let usuarioLogado=null; // {codigo, nome, senhaHash, primeiroAcesso}
+let usuarioLogado=null;
 let _snapshotUnsub=null;
 let _saving=false;
 let S={renda:0,transactions:[],fixedExpenses:[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:'',theme:'light'};
@@ -897,14 +897,19 @@ async function save(){
     });
     localStorage.setItem('gmCache_'+usuarioLogado.codigo,JSON.stringify({renda:S.renda,transactions:S.transactions,fixedExpenses:S.fixedExpenses,lastYM:S.lastYM,theme:S.theme}));
   }catch(e){console.warn('Erro ao salvar:',e);}
-  finally{setTimeout(()=>{_saving=false;},1500);}
+  finally{setTimeout(()=>{_saving=false;},5000);}
 }
 
 function startSync(codigo){
   if(_snapshotUnsub)_snapshotUnsub();
   _snapshotUnsub=onSnapshot(doc(db,'gastometro_usuarios',codigo),(snap)=>{
-    if(!snap.exists()||_saving||!usuarioLogado)return;
+    if(!snap.exists()||!usuarioLogado)return;
+    if(_saving){return;}
     const u=snap.data();
+    // Só atualiza se os dados do Firebase forem diferentes dos locais
+    const remoteStr=JSON.stringify({t:u.transactions,f:u.fixedExpenses,r:u.renda});
+    const localStr=JSON.stringify({t:S.transactions,f:S.fixedExpenses,r:S.renda});
+    if(remoteStr===localStr)return;
     S.renda=u.renda||0;
     S.transactions=u.transactions||[];
     S.fixedExpenses=u.fixedExpenses||[];
