@@ -996,7 +996,7 @@ window.deletarGasto=function(id){
 
 // ── ADD EXPENSE ───────────────────────────────────────────────
 let selectedCat='outros',selectedPayment='dinheiro',isFixedExpense=false;
-function openModal(){document.getElementById('modal-bg').classList.remove('hidden');document.getElementById('inp-valor').value='';document.getElementById('inp-desc').value='';document.getElementById('cat-suggest').classList.add('hidden');document.getElementById('inp-data').value=new Date().toISOString().split('T')[0];selectedCat='outros';selectedPayment='dinheiro';isFixedExpense=false;document.getElementById('fixed-toggle-row').classList.remove('active');selectPayment('dinheiro');renderCatGrid();setTimeout(()=>document.getElementById('inp-valor').focus(),100);}
+function openModal(){document.getElementById('modal-bg').classList.remove('hidden');document.getElementById('inp-valor').value='';document.getElementById('inp-desc').value='';const _cs=document.getElementById('cat-suggest');if(_cs)_cs.classList.add('hidden');document.getElementById('inp-data').value=new Date().toISOString().split('T')[0];selectedCat='outros';selectedPayment='dinheiro';isFixedExpense=false;document.getElementById('fixed-toggle-row').classList.remove('active');selectPayment('dinheiro');renderCatGrid();setTimeout(()=>document.getElementById('inp-valor').focus(),100);}
 function toggleFixedFlag(){isFixedExpense=!isFixedExpense;document.getElementById('fixed-toggle-row').classList.toggle('active',isFixedExpense);}
 function closeModalBg(e){if(e.target===document.getElementById('modal-bg'))closeModal();}
 function closeModal(){document.getElementById('modal-bg').classList.add('hidden');}
