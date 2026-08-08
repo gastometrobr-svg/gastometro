@@ -976,7 +976,11 @@ window.deletarGasto=function(id){
 
 // ── ADD EXPENSE ───────────────────────────────────────────────
 let selectedCat='outros',selectedPayment='dinheiro',isFixedExpense=false;
-function openModal(){document.getElementById('modal-bg').classList.remove('hidden');document.getElementById('inp-valor').value='';document.getElementById('inp-desc').value='';const _cs=document.getElementById('cat-suggest');if(_cs)_cs.classList.add('hidden');document.getElementById('inp-data').value=new Date().toISOString().split('T')[0];selectedCat='outros';selectedPayment='dinheiro';isFixedExpense=false;document.getElementById('fixed-toggle-row').classList.remove('active');renderCatGrid();setTimeout(()=>document.getElementById('inp-valor').focus(),100);}
+function openModal(){document.getElementById('modal-bg').classList.remove('hidden');document.getElementById('inp-valor').value='';document.getElementById('inp-desc').value='';const _cs=document.getElementById('cat-suggest');if(_cs)_cs.classList.add('hidden');const _now=new Date();
+  const _minDate=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0')+'-01';
+  const _inpData=document.getElementById('inp-data');
+  _inpData.value=_now.toISOString().split('T')[0];
+  _inpData.min=_minDate;selectedCat='outros';selectedPayment='dinheiro';isFixedExpense=false;document.getElementById('fixed-toggle-row').classList.remove('active');renderCatGrid();setTimeout(()=>document.getElementById('inp-valor').focus(),100);}
 function toggleFixedFlag(){isFixedExpense=!isFixedExpense;document.getElementById('fixed-toggle-row').classList.toggle('active',isFixedExpense);}
 function closeModalBg(e){if(e.target===document.getElementById('modal-bg'))closeModal();}
 function closeModal(){document.getElementById('modal-bg').classList.add('hidden');}
@@ -990,6 +994,12 @@ function addExpense(){
   const date=document.getElementById('inp-data').value;
   if(!val||val<=0){toast('Digite um valor válido');return;}
   if(!desc){toast('Digite uma descrição');return;}
+  // Bloquear meses anteriores ao atual
+  const now=new Date();
+  const mesAtual=new Date(now.getFullYear(),now.getMonth(),1);
+  const dataGasto=new Date(date+'T00:00:00');
+  const mesGasto=new Date(dataGasto.getFullYear(),dataGasto.getMonth(),1);
+  if(mesGasto<mesAtual){toast('Não é possível cadastrar gastos em meses anteriores!');return;}
   S.transactions.push({id:Date.now(),desc,cat:selectedCat,val,date,pay:selectedPayment,paid:false,fixed:isFixedExpense});
   if(isFixedExpense){if(!S.fixedExpenses)S.fixedExpenses=[];S.fixedExpenses.push({id:Date.now()+1,desc,cat:selectedCat,val,pay:selectedPayment});}
   closeModal();save();render();renderFixedList();
