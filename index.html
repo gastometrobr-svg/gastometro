@@ -1201,16 +1201,20 @@ async function init(){
         S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
         document.getElementById('splash').classList.add('hidden');
         abrirApp();
-        // Atualizar dados do Firebase em background
+        // Atualizar dados do Firebase em background e renovar cache local
         getDoc(doc(db,'gastometro_usuarios',codigoSalvo)).then(snap=>{
           if(snap.exists()){
             const fu=snap.data();
-            // Só atualiza se Firebase tiver dados mais recentes
-            if(fu.transactions&&fu.transactions.length>0){
-              S.renda=fu.renda||0;S.transactions=fu.transactions||[];
-              S.fixedExpenses=fu.fixedExpenses||[];S.lastYM=fu.lastYM||'';
-              render();renderFixedList();
-            }
+            S.renda=fu.renda||0;S.transactions=fu.transactions||[];
+            S.fixedExpenses=fu.fixedExpenses||[];S.lastYM=fu.lastYM||'';
+            // Renova o cache local com dados frescos do Firebase
+            localStorage.setItem('gmCache_'+codigoSalvo,JSON.stringify({
+              nome:fu.nome,codigo:fu.codigo,senhaHash:fu.senhaHash,
+              primeiroAcesso:false,renda:fu.renda||0,
+              transactions:fu.transactions||[],fixedExpenses:fu.fixedExpenses||[],
+              lastYM:fu.lastYM||'',theme:fu.theme||S.theme
+            }));
+            render();renderFixedList();
           }
         }).catch(()=>{});
         return;
