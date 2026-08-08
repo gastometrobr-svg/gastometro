@@ -886,11 +886,15 @@ function abrirApp(){
 // ── SAVE ─────────────────────────────────────────────────────
 async function save(){
   if(!usuarioLogado)return;
+  // Salva no localStorage imediatamente
+  const cache={nome:usuarioLogado.nome,codigo:usuarioLogado.codigo,senhaHash:usuarioLogado.senhaHash,primeiroAcesso:false,renda:S.renda,transactions:S.transactions,fixedExpenses:S.fixedExpenses,lastYM:S.lastYM,theme:S.theme};
+  localStorage.setItem('gmCache_'+usuarioLogado.codigo,JSON.stringify(cache));
+  // Salva no Firebase em background
   try{
     await updateDoc(doc(db,'gastometro_usuarios',usuarioLogado.codigo),{
       renda:S.renda,transactions:S.transactions,fixedExpenses:S.fixedExpenses,lastYM:S.lastYM,theme:S.theme
     });
-  }catch(e){console.warn('Erro ao salvar:',e);}
+  }catch(e){console.warn('Erro ao salvar no Firebase:',e);}
 }
 
 
@@ -1183,10 +1187,33 @@ async function init(){
     new Promise(res=>setTimeout(res,2000))
   ]);
   if(isAdmin){document.getElementById('splash').classList.add('hidden');initAdmin();return;}
-  // Auto-login — mantém splash até resolver
+  // Auto-login — tenta cache local primeiro, Firebase como fallback
   try{
     const codigoSalvo=localStorage.getItem('gmLogado');
     if(codigoSalvo){
+      // Tentar cache local primeiro (instantâneo)
+      const cacheStr=localStorage.getItem('gmCache_'+codigoSalvo);
+      if(cacheStr){
+        const u=JSON.parse(cacheStr);
+        usuarioLogado=u;
+        S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
+        document.getElementById('splash').classList.add('hidden');
+        abrirApp();
+        // Atualizar dados do Firebase em background
+        getDoc(doc(db,'gastometro_usuarios',codigoSalvo)).then(snap=>{
+          if(snap.exists()){
+            const fu=snap.data();
+            // Só atualiza se Firebase tiver dados mais recentes
+            if(fu.transactions&&fu.transactions.length>0){
+              S.renda=fu.renda||0;S.transactions=fu.transactions||[];
+              S.fixedExpenses=fu.fixedExpenses||[];S.lastYM=fu.lastYM||'';
+              render();renderFixedList();
+            }
+          }
+        }).catch(()=>{});
+        return;
+      }
+      // Sem cache local, buscar do Firebase
       const snap=await getDoc(doc(db,'gastometro_usuarios',codigoSalvo));
       if(snap.exists()){
         const u=snap.data();
