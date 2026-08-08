@@ -526,9 +526,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
     <div class="field">
       <label>Descrição</label>
       <input type="text" id="inp-desc" placeholder="Ex: Almoco no restaurante" oninput="detectCategory()"/>
-      <div class="cat-suggestion hidden" id="cat-suggest"><span id="cat-suggest-icon">🏷️</span><span>Detectado: <strong id="cat-suggest-name"></strong></span></div>
     </div>
-    <div class="field"><label>Categoria</label><div class="cat-grid" id="cat-grid"></div></div>
     <div class="field"><label>Data do gasto</label><input type="date" id="inp-data"/></div>
     <div class="field">
       <div class="fixed-toggle-row" id="fixed-toggle-row" onclick="toggleFixedFlag()">
@@ -639,14 +637,14 @@ const db = getFirestore(fbApp);
 
 // ── CATEGORIES ──────────────────────────────────────────────
 const CATS=[
-  {id:'alimentacao',icon:'🍽️',name:'Alimentacao',color:'#eb6834',kw:['restaurante','lanche','almoco','jantar','ifood','pizza','burger','hamburguer','cafe','cafeteria','padaria','mercado','supermercado','comida','refeicao','marmita','delivery','rappi','acai','sorvete','churrasco','sushi']},
+  {id:'alimentacao',icon:'🍽️',name:'Alimentação',color:'#eb6834',kw:['restaurante','lanche','almoco','jantar','ifood','pizza','burger','hamburguer','cafe','cafeteria','padaria','mercado','supermercado','comida','refeicao','marmita','delivery','rappi','acai','sorvete','churrasco','sushi']},
   {id:'transporte',icon:'🚗',name:'Transporte',color:'#1baf7a',kw:['uber','99','gasolina','combustivel','etanol','posto','estacionamento','onibus','metro','trem','taxi','mototaxi','pedagio','passagem','bilhete']},
-  {id:'saude',icon:'❤️',name:'Saude',color:'#e34948',kw:['farmacia','remedio','medicamento','medico','consulta','dentista','hospital','clinica','exame','academia','fisioterapia','psicologo','suplemento','vitamina','salao','cabeleireiro','manicure','pedicure','depilacao','estetica','spa','unha','cabelo','massagem']},
+  {id:'saude',icon:'❤️',name:'Saúde',color:'#e34948',kw:['farmacia','remedio','medicamento','medico','consulta','dentista','hospital','clinica','exame','academia','fisioterapia','psicologo','suplemento','vitamina','salao','cabeleireiro','manicure','pedicure','depilacao','estetica','spa','unha','cabelo','massagem']},
   {id:'lazer',icon:'🎮',name:'Lazer',color:'#4a3aa7',kw:['netflix','spotify','amazon prime','disney','cinema','teatro','show','festa','bar','balada','viagem','hotel','pousada','jogo','game','streaming','xbox','playstation']},
   {id:'compras',icon:'🛍️',name:'Compras',color:'#e87ba4',kw:['roupa','sapato','calcado','shopping','amazon','mercado livre','magazine','americanas','eletronico','celular','notebook','eletrodomestico','loja','vestuario','perfume','blusa','vestido','saia','bolsa','shein','renner','riachuelo']},
   {id:'contas',icon:'📋',name:'Contas & Casa',color:'#1baf7a',kw:['luz','energia','agua','internet','telefone','aluguel','condominio','gas','iptu','seguro','conta','fatura','boleto','prestacao']},
-  {id:'educacao',icon:'📚',name:'Educacao',color:'#eda100',kw:['curso','livro','faculdade','escola','colegio','mensalidade','udemy','alura','material','apostila','treinamento','workshop']},
-  {id:'cartao',icon:'💳',name:'Cartao Cred.',color:'#8b5cf6',kw:['fatura','nubank','inter','itau','bradesco','santander','caixa','c6','xp','cartao','credito','visa','mastercard','amex','elo','hipercard']},
+  {id:'educacao',icon:'📚',name:'Educação',color:'#eda100',kw:['curso','livro','faculdade','escola','colegio','mensalidade','udemy','alura','material','apostila','treinamento','workshop']},
+  {id:'cartao',icon:'💳',name:'Cartão Cred.',color:'#8b5cf6',kw:['fatura','nubank','inter','itau','bradesco','santander','caixa','c6','xp','cartao','credito','visa','mastercard','amex','elo','hipercard']},
   {id:'outros',icon:'📦',name:'Outros',color:'#2a78d6',kw:[]}
 ];
 
