@@ -350,7 +350,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
       <div id="bloco-sucesso-criacao" style="display:none;margin-top:14px">
         <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;text-align:center;margin-bottom:12px">
           <div style="font-size:24px;margin-bottom:6px">✓</div>
-          <div style="font-weight:700;color:#166534;font-size:15px">Usuario criado!</div>
+          <div style="font-weight:700;color:#166534;font-size:15px">Usuário criado!</div>
           <div style="font-size:13px;color:#166534;margin-top:4px">Código: <strong id="bloco-codigo-criado"></strong></div>
         </div>
         <div class="wpp-box">
@@ -423,9 +423,9 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
           <div class="prog-bar-bg"><div class="prog-bar" id="prog-bar" style="width:0%"></div></div>
         </div>
       </div>
-      
-      
-      
+      <div class="card"><div class="card-title">Por categoria</div><div id="cat-breakdown"></div></div>
+      <div class="card"><div class="card-title">Distribuição</div><div class="chart-wrap"><canvas id="chart-pizza"></canvas></div></div>
+      <div class="card"><div class="card-title">Últimos lançamentos</div><div id="recent-list"></div></div>
     </div>
 
     <div id="panel-lancamentos" class="panel">
@@ -544,7 +544,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Gasto Fixo Recorrente</div>
-    <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Lançado automaticamente todo mes na virada.</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Lançado automaticamente todo mês na virada.</div>
     <div class="field"><label>Valor (R$)</label><input type="number" id="fx-valor" class="amt-input" placeholder="0,00" inputmode="decimal" step="0.01" min="0"/></div>
     <div class="field"><label>Descrição</label><input type="text" id="fx-desc" placeholder="Ex: Aluguel, Academia, Internet"/></div>
     
@@ -670,6 +670,7 @@ let _snapshotUnsub=null;
 let _saving=false;
 let S={renda:0,transactions:[],fixedExpenses:[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:'',theme:'light'};
 let pizzaChart=null,barChart=null;
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
 let _codigoRecem='';
 
 // ── POPUP SISTEMA ────────────────────────────────────────────
@@ -761,7 +762,7 @@ async function carregarListaUsuarios(){
   const el=document.getElementById('adm-lista-usuarios');
   try{
     const snap=await getDocs(collection(db,'gastometro_usuarios'));
-    if(snap.empty){el.innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px 0">Nenhum usuario cadastrado</div>';return;}
+    if(snap.empty){el.innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px 0">Nenhum usuário cadastrado</div>';return;}
     let html='';
     snap.forEach(d=>{
       const u=d.data();
@@ -1001,23 +1002,23 @@ window.deletarGasto=function(id){
 
 // ── ADD EXPENSE ───────────────────────────────────────────────
 let selectedCat='outros',selectedPayment='dinheiro',isFixedExpense=false;
-function openModal(){document.getElementById('modal-bg').classList.remove('hidden');document.getElementById('inp-valor').value='';document.getElementById('inp-desc').value='';const _cs=document.getElementById('cat-suggest');if(_cs)_cs.classList.add('hidden');document.getElementById('inp-data').value=new Date().toISOString().split('T')[0];selectedCat='outros';selectedPayment='dinheiro';isFixedExpense=false;document.getElementById('fixed-toggle-row').classList.remove('active');selectPayment('dinheiro');renderCatGrid();setTimeout(()=>document.getElementById('inp-valor').focus(),100);}
+function openModal(){document.getElementById('modal-bg').classList.remove('hidden');document.getElementById('inp-valor').value='';document.getElementById('inp-desc').value='';const _cs=document.getElementById('cat-suggest');if(_cs)_cs.classList.add('hidden');document.getElementById('inp-data').value=new Date().toISOString().split('T')[0];selectedCat='outros';selectedPayment='dinheiro';isFixedExpense=false;document.getElementById('fixed-toggle-row').classList.remove('active');renderCatGrid();setTimeout(()=>document.getElementById('inp-valor').focus(),100);}
 function toggleFixedFlag(){isFixedExpense=!isFixedExpense;document.getElementById('fixed-toggle-row').classList.toggle('active',isFixedExpense);}
 function closeModalBg(e){if(e.target===document.getElementById('modal-bg'))closeModal();}
 function closeModal(){document.getElementById('modal-bg').classList.add('hidden');}
 function renderCatGrid(){}
 window.selectCat=function(id){selectedCat=id;renderCatGrid();};
 function detectCategory(){}
-function selectPayment(type){selectedPayment=type;document.getElementById('pay-dinheiro').classList.toggle('selected',type==='dinheiro');document.getElementById('pay-credito').classList.toggle('selected',type==='credito');}
+function selectPayment(type){selectedPayment=type;}
 function addExpense(){
   const val=parseFloat(document.getElementById('inp-valor').value);
   const desc=document.getElementById('inp-desc').value.trim();
   const date=document.getElementById('inp-data').value;
-  if(!val||val<=0){toast('Digite um valor valido');return;}
-  if(!desc){toast('Digite uma descricao');return;}
+  if(!val||val<=0){toast('Digite um valor válido');return;}
+  if(!desc){toast('Digite uma descrição');return;}
   S.transactions.push({id:Date.now(),desc,cat:selectedCat,val,date,pay:selectedPayment,paid:false,fixed:isFixedExpense});
   if(isFixedExpense){if(!S.fixedExpenses)S.fixedExpenses=[];S.fixedExpenses.push({id:Date.now()+1,desc,cat:selectedCat,val,pay:selectedPayment});}
-  save();closeModal();render();renderFixedList();
+  closeModal();save();render();renderFixedList();
   toast(isFixedExpense?'Gasto fixo salvo! Vai se repetir todo mês.':'Gasto adicionado!');
 }
 
@@ -1027,18 +1028,18 @@ function switchPanel(name,idx){document.querySelectorAll('.panel').forEach(p=>p.
 function toggleTheme(){const isDark=document.documentElement.getAttribute('data-theme')==='dark';const next=isDark?'light':'dark';document.documentElement.setAttribute('data-theme',next);document.getElementById('theme-toggle').classList.toggle('on',next==='dark');S.theme=next;save();if(pizzaChart){pizzaChart.destroy();pizzaChart=null;}if(barChart){barChart.destroy();barChart=null;}render();}
 function editRenda(){document.getElementById('inp-renda').value=S.renda||'';document.getElementById('modal-renda').classList.remove('hidden');setTimeout(()=>document.getElementById('inp-renda').focus(),100);}
 function closeModalRenda(){document.getElementById('modal-renda').classList.add('hidden');}
-function salvarRenda(){const n=parseFloat(document.getElementById('inp-renda').value);if(!isNaN(n)&&n>=0){S.renda=n;save();render();closeModalRenda();toast('Renda atualizada!');}}
+function salvarRenda(){const n=parseFloat(document.getElementById('inp-renda').value);if(!isNaN(n)&&n>=0){S.renda=n;closeModalRenda();save();render();toast('Renda atualizada!');}}
 function confirmarLimpar(){showPopup({icon:'⚠️',title:'Limpar dados',msg:'Apagar todos os gastos deste mes?',btns:[{label:'Cancelar',style:'ghost'},{label:'Limpar',style:'danger',action:()=>{const y=S.currentYear,m=S.currentMonth;S.transactions=S.transactions.filter(t=>{const d=new Date(t.date+'T00:00:00');return!(d.getFullYear()===y&&d.getMonth()===m);});save();render();toast('Dados do mes limpos');}}]});}
 
 // ── GASTOS FIXOS ──────────────────────────────────────────────
 let fxSelectedCat='contas',fxSelectedPayment='dinheiro';
 function renderFixedList(){const el=document.getElementById('fixed-list');if(!el)return;if(!S.fixedExpenses||!S.fixedExpenses.length){el.innerHTML='<div class="empty-fixed">Nenhum gasto fixo cadastrado</div>';return;}el.innerHTML=S.fixedExpenses.map(fe=>{return`<div class="fixed-item"><div class="fixed-item-info"><div class="fixed-item-desc">${fe.desc}</div><div class="fixed-item-meta">${fe.pay==='credito'?'Credito':'Debito'}</div></div><div class="fixed-item-val">${fmt(fe.val)}</div><button class="fixed-item-del" onclick="window.deleteFixed('${fe.id}')">x</button></div>`;}).join('');}
-function openFixedModal(){fxSelectedCat='contas';fxSelectedPayment='dinheiro';document.getElementById('fx-valor').value='';document.getElementById('fx-desc').value='';renderFxCatGrid();document.getElementById('fx-pay-dinheiro').classList.add('selected');document.getElementById('fx-pay-credito').classList.remove('selected');document.getElementById('fixed-modal-bg').classList.remove('hidden');}
+function openFixedModal(){fxSelectedCat='contas';fxSelectedPayment='dinheiro';document.getElementById('fx-valor').value='';document.getElementById('fx-desc').value='';renderFxCatGrid();document.getElementById('fixed-modal-bg').classList.remove('hidden');}
 function closeFixedModalBg(e){if(e.target===document.getElementById('fixed-modal-bg'))closeFixedModal();}
 function closeFixedModal(){document.getElementById('fixed-modal-bg').classList.add('hidden');}
 function renderFxCatGrid(){}
 window.fxSelectCat=function(id){fxSelectedCat=id;renderFxCatGrid();};
-function selectFixedPayment(v){fxSelectedPayment=v;document.getElementById('fx-pay-dinheiro').classList.toggle('selected',v==='dinheiro');document.getElementById('fx-pay-credito').classList.toggle('selected',v==='credito');}
+function selectFixedPayment(v){fxSelectedPayment=v;}
 function saveFixedExpense(){const val=parseFloat(document.getElementById('fx-valor').value);const desc=document.getElementById('fx-desc').value.trim();if(!val||val<=0){toast('Informe o valor');return;}if(!desc){toast('Informe a descricao');return;}if(!S.fixedExpenses)S.fixedExpenses=[];S.fixedExpenses.push({id:Date.now()+'',desc,cat:fxSelectedCat,val,pay:fxSelectedPayment});save();closeFixedModal();renderFixedList();toast('Gasto fixo salvo! Sera lancado todo mes.');}
 window.deleteFixed=function(id){showPopup({icon:'🗑️',title:'Remover gasto fixo',msg:'Deseja remover este gasto fixo?',btns:[{label:'Cancelar',style:'ghost'},{label:'Remover',style:'danger',action:()=>{S.fixedExpenses=S.fixedExpenses.filter(f=>f.id!==id);save();renderFixedList();toast('Gasto fixo removido');}}]});};
 
@@ -1155,12 +1156,12 @@ function salvarParcelado(){
     if(d<=now){
       parcelaAtual++;
       const dateStr=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';
-      S.transactions.push({id:Date.now()+Math.random(),desc:`${desc} (${parcelaAtual}/${total})`,cat:'outros',val:valores[i],date:dateStr,paid:false,parceladoId:id});
+      S.transactions.push({id:uid(),desc:`${desc} (${parcelaAtual}/${total})`,cat:'outros',val:valores[i],date:dateStr,paid:false,parceladoId:id});
     }
   }
   S.fixedExpenses[S.fixedExpenses.length-1].parcelaAtual=parcelaAtual;
-  save();render();
   document.getElementById('modal-parcelas-bg').classList.add('hidden');
+  save();render();
   toast(`Parcelado salvo! ${parcelaAtual} de ${total} parcelas lançadas.`);
 }
 // Ao inserir gastos fixos na virada, incluir parcelados
@@ -1174,13 +1175,13 @@ function insertFixedExpenses(){
       if(fe.parcelaAtual>=fe.totalParcelas){toRemove.push(fe.id);return;}
       const val=fe.valores?fe.valores[fe.parcelaAtual]:fe.val;
       fe.parcelaAtual++;
-      S.transactions.push({id:Date.now()+Math.random(),desc:`${fe.desc} (${fe.parcelaAtual}/${fe.totalParcelas})`,cat:fe.cat||'outros',val,date:dateStr,paid:false,parceladoId:fe.id});
+      S.transactions.push({id:uid(),desc:`${fe.desc} (${fe.parcelaAtual}/${fe.totalParcelas})`,cat:fe.cat||'outros',val,date:dateStr,paid:false,parceladoId:fe.id});
       if(fe.parcelaAtual>=fe.totalParcelas){
         toRemove.push(fe.id);
         toast(`${fe.desc} — todas as ${fe.totalParcelas} parcelas concluídas!`);
       }
     } else {
-      S.transactions.push({id:Date.now()+Math.random(),desc:fe.desc,cat:fe.cat,val:fe.val,date:dateStr,paid:false,fixed:true});
+      S.transactions.push({id:uid(),desc:fe.desc,cat:fe.cat,val:fe.val,date:dateStr,paid:false,fixed:true});
     }
   });
   if(toRemove.length)S.fixedExpenses=S.fixedExpenses.filter(f=>!toRemove.includes(f.id));
