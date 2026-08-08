@@ -264,6 +264,10 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 .politica-texto{font-size:13px;color:var(--text2);line-height:1.6}
 .politica-destaque{font-size:12px;background:var(--surface2);border-radius:8px;padding:10px 12px;color:var(--text2);line-height:1.7;margin:6px 0}
 
+
+/* ── PARCELADO ── */
+.parcela-badge{display:inline-block;background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:700;border-radius:4px;padding:1px 6px;margin-left:4px}
+
 /* ── TOAST ── */
 #toast-el{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:999px;font-size:14px;font-weight:600;z-index:9999;transition:opacity .3s;white-space:nowrap;pointer-events:none;opacity:0}
 </style>
@@ -307,7 +311,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
     <div class="ts-sub">Por segurança, crie uma senha pessoal para acessar o GastôMetro.</div>
     <div class="login-field">
       <label>Nova senha</label>
-      <input type="password" id="nova-senha" placeholder="Minimo 6 caracteres"/>
+      <input type="password" id="nova-senha" placeholder="Mínimo 6 caracteres"/>
     </div>
     <div class="login-field">
       <label>Confirmar senha</label>
@@ -330,9 +334,9 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
   <div class="admin-body">
 
     <div class="admin-card">
-      <div class="admin-card-title">Criar novo usuario</div>
+      <div class="admin-card-title">Criar novo usuário</div>
       <div class="admin-field">
-        <label>Nome do usuario</label>
+        <label>Nome do usuário</label>
         <input type="text" id="adm-nome" placeholder="Ex: Joao Silva"/>
       </div>
       <div class="admin-field">
@@ -357,7 +361,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
           </div>
           <button class="wpp-btn" onclick="enviarWhatsAppAdmin()">Enviar pelo WhatsApp</button>
         </div>
-        <button onclick="novoUsuario()" style="width:100%;margin-top:10px;padding:12px;border-radius:10px;background:none;border:1.5px solid var(--border);font-size:14px;font-weight:600;color:var(--text2);cursor:pointer">Criar outro usuario</button>
+        <button onclick="novoUsuario()" style="width:100%;margin-top:10px;padding:12px;border-radius:10px;background:none;border:1.5px solid var(--border);font-size:14px;font-weight:600;color:var(--text2);cursor:pointer">Criar outro usuário</button>
       </div>
     </div>
 
@@ -421,7 +425,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
       </div>
       <div class="card"><div class="card-title">Por categoria</div><div id="cat-breakdown"></div></div>
       <div class="card"><div class="card-title">Distribuição</div><div class="chart-wrap"><canvas id="chart-pizza"></canvas></div></div>
-      <div class="card"><div class="card-title">Ultimos lancamentos</div><div id="recent-list"></div></div>
+      <div class="card"><div class="card-title">Últimos lançamentos</div><div id="recent-list"></div></div>
     </div>
 
     <div id="panel-lancamentos" class="panel">
@@ -528,11 +532,12 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
     <div class="field"><label>Data do gasto</label><input type="date" id="inp-data"/></div>
     <div class="field">
       <div class="fixed-toggle-row" id="fixed-toggle-row" onclick="toggleFixedFlag()">
-        <div><div style="font-weight:700;font-size:14px;color:var(--text)">Gasto fixo mensal?</div><div style="font-size:12px;color:var(--text3);margin-top:2px">Repetir automaticamente todo mes</div></div>
+        <div><div style="font-weight:700;font-size:14px;color:var(--text)">Gasto fixo mensal?</div><div style="font-size:12px;color:var(--text3);margin-top:2px">Repetir automaticamente todo mês</div></div>
         <div class="fixed-toggle-sw" id="fixed-toggle-sw"></div>
       </div>
     </div>
     <button class="submit-btn" onclick="addExpense()">Salvar gasto</button>
+    <button style="width:100%;padding:12px;border-radius:14px;background:none;border:1.5px solid var(--border);font-size:14px;font-weight:600;color:var(--primary);cursor:pointer;margin-top:8px" onclick="closeModal();abrirModalParcelado()">Parcelado? Toque aqui</button>
   </div>
 </div>
 
@@ -541,11 +546,27 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Gasto Fixo Recorrente</div>
-    <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Lancado automaticamente todo mes na virada.</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Lançado automaticamente todo mes na virada.</div>
     <div class="field"><label>Valor (R$)</label><input type="number" id="fx-valor" class="amt-input" placeholder="0,00" inputmode="decimal" step="0.01" min="0"/></div>
     <div class="field"><label>Descrição</label><input type="text" id="fx-desc" placeholder="Ex: Aluguel, Academia, Internet"/></div>
     <div class="field"><label>Categoria</label><div class="cat-grid" id="fx-cat-grid"></div></div>
     <button class="submit-btn" onclick="saveFixedExpense()">Salvar gasto fixo</button>
+  </div>
+</div>
+
+
+<!-- MODAL PARCELADO -->
+<div class="modal-bg hidden" id="modal-parcelas-bg" onclick="if(event.target===this)document.getElementById('modal-parcelas-bg').classList.add('hidden')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Gasto Parcelado</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Lançado automaticamente a cada mês até acabar as parcelas.</div>
+    <div class="field"><label>Valor de cada parcela (R$)</label><input type="number" id="parc-valor" class="amt-input" placeholder="0,00" inputmode="decimal" step="0.01" min="0"/></div>
+    <div class="field"><label>Descrição</label><input type="text" id="parc-desc" placeholder="Ex: Empréstimo Banco, Financiamento"/></div>
+    <div class="field"><label>Categoria</label><div class="cat-grid" id="parc-cat-grid"></div></div>
+    <div class="field"><label>Número de parcelas</label><input type="number" id="parc-total" placeholder="Ex: 12" inputmode="numeric" min="1" max="360" style="font-size:20px;font-weight:700;text-align:center"/></div>
+    <div class="field"><label>Mês inicial</label><input type="month" id="parc-inicio"/></div>
+    <button class="submit-btn" onclick="salvarParcelado()">Salvar parcelado</button>
   </div>
 </div>
 
@@ -564,7 +585,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Alterar Senha</div>
-    <div class="field"><label>Nova senha</label><input type="password" id="vol-nova-senha" placeholder="Minimo 6 caracteres"/></div>
+    <div class="field"><label>Nova senha</label><input type="password" id="vol-nova-senha" placeholder="Mínimo 6 caracteres"/></div>
     <div class="field"><label>Confirmar senha</label><input type="password" id="vol-confirma-senha" placeholder="Repita a senha"/></div>
     <div class="login-erro" id="vol-troca-erro" style="margin-bottom:12px"></div>
     <button class="submit-btn" onclick="salvarTrocaSenhaVol()">Salvar senha</button>
@@ -815,8 +836,8 @@ async function trocarSenha(){
   const nova=document.getElementById('nova-senha').value;
   const confirma=document.getElementById('confirma-senha').value;
   document.getElementById('troca-erro').textContent='';
-  if(nova.length<6){document.getElementById('troca-erro').textContent='Minimo 6 caracteres';return;}
-  if(nova!==confirma){document.getElementById('troca-erro').textContent='Senhas nao conferem';return;}
+  if(nova.length<6){document.getElementById('troca-erro').textContent='Mínimo 6 caracteres';return;}
+  if(nova!==confirma){document.getElementById('troca-erro').textContent='Senhas não conferem';return;}
   const h=await sha256(nova);
   await updateDoc(doc(db,'gastometro_usuarios',usuarioLogado.codigo),{senhaHash:h,primeiroAcesso:false});
   usuarioLogado.senhaHash=h;usuarioLogado.primeiroAcesso=false;
@@ -836,8 +857,8 @@ async function salvarTrocaSenhaVol(){
   const nova=document.getElementById('vol-nova-senha').value;
   const confirma=document.getElementById('vol-confirma-senha').value;
   document.getElementById('vol-troca-erro').textContent='';
-  if(nova.length<6){document.getElementById('vol-troca-erro').textContent='Minimo 6 caracteres';return;}
-  if(nova!==confirma){document.getElementById('vol-troca-erro').textContent='Senhas nao conferem';return;}
+  if(nova.length<6){document.getElementById('vol-troca-erro').textContent='Mínimo 6 caracteres';return;}
+  if(nova!==confirma){document.getElementById('vol-troca-erro').textContent='Senhas não conferem';return;}
   const h=await sha256(nova);
   await updateDoc(doc(db,'gastometro_usuarios',usuarioLogado.codigo),{senhaHash:h});
   document.getElementById('modal-troca-senha-vol').classList.add('hidden');
@@ -921,7 +942,7 @@ function render(){
   const bycat={};txs.forEach(t=>{bycat[t.cat]=(bycat[t.cat]||0)+t.val;});
   const sortedCats=Object.entries(bycat).sort((a,b)=>b[1]-a[1]);
   const catEl=document.getElementById('cat-breakdown');
-  if(!sortedCats.length){catEl.innerHTML='<div class="empty"><div class="empty-icon">🏷️</div><div class="empty-text">Nenhum gasto este mes</div></div>';}
+  if(!sortedCats.length){catEl.innerHTML='<div class="empty"><div class="empty-icon">🏷️</div><div class="empty-text">Nenhum gasto este mês</div></div>';}
   else{catEl.innerHTML=sortedCats.map(([id,val])=>{const c=getCat(id);const p=total>0?(val/total*100).toFixed(0):0;return`<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600">${c.icon} ${c.name}</div><div style="font-size:13px;font-weight:700;color:var(--text2)">${fmt(val)} <span style="color:var(--text3)">(${p}%)</span></div></div><div class="prog-bar-bg"><div class="prog-bar" style="width:${total>0?(val/total*100):0}%;background:${c.color}"></div></div></div>`;}).join('');}
   renderTxList('recent-list',[...txs].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5),false);
   renderTxList('all-tx-list',[...txs].sort((a,b)=>b.date.localeCompare(a.date)),true);
@@ -1011,10 +1032,10 @@ window.deleteFixed=function(id){showPopup({icon:'🗑️',title:'Remover gasto f
 const TUT_STEPS=[
   {icon:'💸',title:'Bem-vindo ao GastôMetro!',desc:'Controle seus gastos mensais de forma simples e inteligente. Vamos te mostrar como usar!'},
   {icon:'➕',title:'Adicionar um gasto',desc:'Toque no botão + para lançar um gasto. Digite a descricao e o app detecta a categoria automaticamente!'},
-  {icon:'✓',title:'Marcar como pago',desc:'Toque em "Pagar" em qualquer gasto para marcar como pago. Assim voce acompanha o que ainda esta pendente.'},
+  {icon:'✓',title:'Marcar como pago',desc:'Toque em "Pagar" em qualquer gasto para marcar como pago. Assim você acompanha o que ainda está pendente.'},
   {icon:'📊',title:'Aba Resumo',desc:'Veja quanto gastou, quanto sobra da sua renda e um grafico por categoria. Atualize sua renda nas Configuracoes.'},
-  {icon:'🔁',title:'Gastos Fixos',desc:'Em Configuracoes, cadastre gastos que se repetem todo mes (aluguel, internet, academia). Eles sao lancados automaticamente!'},
-  {icon:'📅',title:'Historico Mensal',desc:'Na aba Historico voce ve os gastos dos ultimos 6 meses e compara a evolucao mês a mes.'},
+  {icon:'🔁',title:'Gastos Fixos',desc:'Marque o toggle "Gasto fixo" ao cadastrar. Ele se repete todo mês automaticamente!'},
+  {icon:'📅',title:'Histórico Mensal',desc:'Na aba Histórico você vê os gastos dos últimos 6 meses e compara a evolução mês a mês.'},
 ];
 let tutStep=0;
 function startTutorial(){tutStep=0;renderTutStep();document.getElementById('tutorial-overlay').classList.remove('hidden');}
@@ -1063,6 +1084,77 @@ window.startTutorial=startTutorial;
 window.tutNext=tutNext;
 window.skipTutorial=skipTutorial;
 window.sairAdmin=sairAdmin;
+
+
+// ── PARCELADO ──────────────────────────────────────────────
+let parcSelectedCat='contas';
+function abrirModalParcelado(){
+  parcSelectedCat='contas';
+  document.getElementById('parc-valor').value='';
+  document.getElementById('parc-desc').value='';
+  document.getElementById('parc-total').value='';
+  const now=new Date();
+  document.getElementById('parc-inicio').value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  renderParcCatGrid();
+  document.getElementById('modal-parcelas-bg').classList.remove('hidden');
+}
+function renderParcCatGrid(){
+  const el=document.getElementById('parc-cat-grid');
+  if(!el)return;
+  el.innerHTML=CATS.map(c=>`<button class="cat-btn ${c.id===parcSelectedCat?'selected':''}" onclick="window.parcSelectCat('${c.id}')"><span class="ico">${c.icon}</span>${c.name}</button>`).join('');
+}
+window.parcSelectCat=function(id){parcSelectedCat=id;renderParcCatGrid();};
+function salvarParcelado(){
+  const val=parseFloat(document.getElementById('parc-valor').value);
+  const desc=document.getElementById('parc-desc').value.trim();
+  const total=parseInt(document.getElementById('parc-total').value);
+  const inicio=document.getElementById('parc-inicio').value;
+  if(!val||val<=0){toast('Informe o valor da parcela');return;}
+  if(!desc){toast('Informe a descrição');return;}
+  if(!total||total<1){toast('Informe o número de parcelas');return;}
+  if(!inicio){toast('Informe o mês inicial');return;}
+  if(!S.fixedExpenses)S.fixedExpenses=[];
+  const id='parc_'+Date.now();
+  S.fixedExpenses.push({id,desc,cat:parcSelectedCat,val,parcelado:true,totalParcelas:total,parcelaAtual:0,inicioYM:inicio});
+  // Lançar parcelas já devidas
+  const [anoInicio,mesInicio]=inicio.split('-').map(Number);
+  const now=new Date();
+  let parcelaAtual=0;
+  for(let i=0;i<total;i++){
+    const d=new Date(anoInicio,mesInicio-1+i,1);
+    if(d<=now&&parcelaAtual<total){
+      parcelaAtual++;
+      const dateStr=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';
+      S.transactions.push({id:Date.now()+Math.random(),desc:`${desc} (${parcelaAtual}/${total})`,cat:parcSelectedCat,val,date:dateStr,paid:false,parceladoId:id});
+    }
+  }
+  S.fixedExpenses[S.fixedExpenses.length-1].parcelaAtual=parcelaAtual;
+  save();render();
+  document.getElementById('modal-parcelas-bg').classList.add('hidden');
+  toast(`Parcelado salvo! ${parcelaAtual} de ${total} parcelas lançadas.`);
+}
+// Ao inserir gastos fixos na virada, incluir parcelados
+const _origInsert=insertFixedExpenses;
+function insertFixedExpenses(){
+  if(!S.fixedExpenses||!S.fixedExpenses.length)return;
+  const y=S.currentYear,m=S.currentMonth;
+  const dateStr=y+'-'+String(m+1).padStart(2,'0')+'-01';
+  S.fixedExpenses.forEach(fe=>{
+    if(fe.parcelado){
+      if(fe.parcelaAtual>=fe.totalParcelas)return;
+      fe.parcelaAtual++;
+      S.transactions.push({id:Date.now()+Math.random(),desc:`${fe.desc} (${fe.parcelaAtual}/${fe.totalParcelas})`,cat:fe.cat,val:fe.val,date:dateStr,paid:false,parceladoId:fe.id});
+      if(fe.parcelaAtual>=fe.totalParcelas){
+        S.fixedExpenses=S.fixedExpenses.filter(f=>f.id!==fe.id);
+        toast(`${fe.desc} — todas as ${fe.totalParcelas} parcelas pagas!`);
+      }
+    } else {
+      S.transactions.push({id:Date.now()+Math.random(),desc:fe.desc,cat:fe.cat,val:fe.val,date:dateStr,paid:false,fixed:true});
+    }
+  });
+}
+window.abrirModalParcelado=abrirModalParcelado;
+window.salvarParcelado=salvarParcelado;
 
 // ── BOOT ─────────────────────────────────────────────────────
 async function init(){
