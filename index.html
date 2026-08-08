@@ -474,10 +474,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
         <div class="set-row"><div class="set-label">Ver tutorial novamente</div><button onclick="startTutorial()" style="background:none;border:none;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">Ver</button></div>
       <div style="text-align:center;padding:16px 0 4px;font-size:11px;color:var(--text3)">GastôMetro v1.0.0</div>
       </div>
-      <div class="card">
-        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">Gastos Fixos <button class="btn-primary" style="font-size:12px;padding:6px 12px" onclick="openFixedModal()">+ Adicionar</button></div>
-        <div id="fixed-list" class="fixed-list"></div>
-      </div>
+      <div style="display:none"><div id="fixed-list"></div></div>
     </div>
 
   </div>
@@ -551,7 +548,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
       <label>Descrição</label>
       <input type="text" id="inp-desc" placeholder="Ex: Almoco no restaurante"/>
     </div>
-    <div class="field"><label>Data do gasto</label><input type="date" id="inp-data"/></div>
+    <input type="hidden" id="inp-data"/>
     <div class="field">
       <div class="fixed-toggle-row" id="fixed-toggle-row" onclick="toggleFixedFlag()">
         <div><div style="font-weight:700;font-size:14px;color:var(--text)">Gasto fixo mensal?</div><div style="font-size:12px;color:var(--text3);margin-top:2px">Repetir automaticamente todo mês</div></div>
@@ -585,7 +582,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
     <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Lançado automaticamente a cada mês até acabar as parcelas.</div>
     <div class="field"><label>Descrição</label><input type="text" id="parc-desc" placeholder="Ex: Empréstimo Banco, Financiamento"/></div>
     <div class="field"><label>Número de parcelas</label><input type="number" id="parc-total" placeholder="Ex: 12" inputmode="numeric" min="1" max="360" style="font-size:20px;font-weight:700;text-align:center" oninput="gerarCamposParcelas()"/></div>
-    <div class="field"><label>Mês inicial</label><input type="month" id="parc-inicio"/></div>
+    <input type="hidden" id="parc-inicio"/>
     <div id="parc-valores-container"></div>
     <button class="submit-btn" onclick="salvarParcelado()">Salvar parcelado</button>
   </div>
@@ -1065,13 +1062,30 @@ function getTotalMonth(y,m){return getMonthTx(y,m).reduce((a,t)=>a+t.val,0);}
 function renderTxList(elId,txs,deletable){
   const el=document.getElementById(elId);
   if(!txs.length){el.innerHTML='<div class="empty"><div class="empty-icon"><img src="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Money%20with%20wings/3D/money_with_wings_3d.png" style="width:56px;height:56px"/></div><div class="empty-text">Nenhum gasto encontrado.<br>Toque no + para adicionar.</div></div>';return;}
-  el.innerHTML=`<div class="tx-list">${txs.map(t=>{const c=getCat(t.cat);const dateStr=new Date(t.date+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});const paidClass=t.paid?'pago':'pendente';const paidLabel=t.paid?'Pago':'Pagar';const strikeStyle=t.paid?'text-decoration:line-through;opacity:.6':'';const isPreview=t.preview===true;if(isPreview){const fid=t.id.replace('preview_','');return`<div class="tx"><div class="tx-info"><div class="tx-desc">${t.desc}</div><div class="tx-meta">Gasto fixo</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div></div><button class="tx-del" onclick="window.deletarPreview('${fid}','${t.date}')">🗑</button></div>`;}return`<div class="tx" style="${t.paid?'opacity:.85':''}"><div class="tx-info"><div class="tx-desc" style="${strikeStyle}">${t.desc}</div><div class="tx-meta">${dateStr}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div><button class="tx-paid-btn ${paidClass}" onclick="window.togglePaid('${t.id}')">${paidLabel}</button></div>${deletable?`<button class="tx-del" onclick="window.deletarGasto('${t.id}')">🗑</button>`:''}</div>`;}).join('')}</div>`;
+  el.innerHTML=`<div class="tx-list">${txs.map(t=>{const c=getCat(t.cat);const dateStr=new Date(t.date+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});const paidClass=t.paid?'pago':'pendente';const paidLabel=t.paid?'Pago':'Pagar';const strikeStyle=t.paid?'text-decoration:line-through;opacity:.6':'';const isPreview=t.preview===true;if(isPreview){const fid=t.id.replace('preview_','');return`<div class="tx"><div class="tx-info"><div class="tx-desc">${t.desc}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div><button class="tx-paid-btn pendente" onclick="window.pagarPreview('${fid}','${t.date}','${t.desc.replace(/'/g,"\\'")}','${t.val}','${t.cat||'outros'}')">Pagar</button></div><button class="tx-del" onclick="window.deletarPreview('${fid}','${t.date}')">🗑</button></div>`;}return`<div class="tx" style="${t.paid?'opacity:.85':''}"><div class="tx-info"><div class="tx-desc" style="${strikeStyle}">${t.desc}</div><div class="tx-meta">${dateStr}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div><button class="tx-paid-btn ${paidClass}" onclick="window.togglePaid('${t.id}')">${paidLabel}</button></div>${deletable?`<button class="tx-del" onclick="window.deletarGasto('${t.id}')">🗑</button>`:''}</div>`;}).join('')}</div>`;
 }
 
 window.togglePaid=function(id){
   const tx=S.transactions.find(t=>String(t.id)===String(id));
   if(!tx)return;tx.paid=!tx.paid;save();render();
   toast(tx.paid?'Marcado como pago!':'Marcado como pendente');
+};
+window.pagarPreview=function(fid,date,desc,val,cat){
+  // Converte previsão em transação real já marcada como paga
+  S.transactions.push({id:Date.now(),desc,cat,val:parseFloat(val),date,paid:true,parceladoId:fid});
+  // Se for parcelado, avança parcelaAtual
+  const fe=S.fixedExpenses?S.fixedExpenses.find(f=>String(f.id)===String(fid)):null;
+  if(fe&&fe.parcelado){
+    fe.parcelaAtual=(fe.parcelaAtual||0)+1;
+    if(fe.parcelaAtual>=fe.totalParcelas){
+      S.fixedExpenses=S.fixedExpenses.filter(f=>String(f.id)!==String(fid));
+      save();render();
+      toast('Pago! Todas as parcelas concluídas 🎉');
+      return;
+    }
+  }
+  save();render();
+  toast('Marcado como pago!');
 };
 window.deletarGasto=function(id){
   showPopup({icon:'🗑️',title:'Remover gasto',msg:'Deseja remover este lançamento?',btns:[
@@ -1085,8 +1099,8 @@ let selectedCat='outros',selectedPayment='dinheiro',isFixedExpense=false;
 function openModal(){document.getElementById('modal-bg').classList.remove('hidden');document.getElementById('inp-valor').value='';document.getElementById('inp-desc').value='';const _cs=document.getElementById('cat-suggest');if(_cs)_cs.classList.add('hidden');const _now=new Date();
   const _minDate=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0')+'-01';
   const _inpData=document.getElementById('inp-data');
-  _inpData.value=_now.toISOString().split('T')[0];
-  _inpData.min=_minDate;selectedCat='outros';selectedPayment='dinheiro';isFixedExpense=false;document.getElementById('fixed-toggle-row').classList.remove('active');document.querySelectorAll('#pay-toggle .pay-opt').forEach(b=>b.classList.remove('selected'));const _pd=document.getElementById('pay-dinheiro');if(_pd)_pd.classList.add('selected');renderCatGrid();setTimeout(()=>document.getElementById('inp-valor').focus(),100);}
+  _inpData.value=_now.toISOString().split('T')[0]; // data de hoje automática
+  selectedCat='outros';selectedPayment='dinheiro';isFixedExpense=false;document.getElementById('fixed-toggle-row').classList.remove('active');document.querySelectorAll('#pay-toggle .pay-opt').forEach(b=>b.classList.remove('selected'));const _pd=document.getElementById('pay-dinheiro');if(_pd)_pd.classList.add('selected');renderCatGrid();setTimeout(()=>document.getElementById('inp-valor').focus(),100);}
 function toggleFixedFlag(){isFixedExpense=!isFixedExpense;document.getElementById('fixed-toggle-row').classList.toggle('active',isFixedExpense);}
 function closeModalBg(e){if(e.target===document.getElementById('modal-bg'))closeModal();}
 function closeModal(){document.getElementById('modal-bg').classList.add('hidden');}
@@ -1340,12 +1354,10 @@ async function init(){
   document.getElementById('tela-login').classList.remove('hidden');
 }
 init();
-</script>
-</body>
-</html>
 
-<!-- BANNER PWA -->
-<div id="banner-instalar" style="display:none;position:fixed;bottom:80px;left:12px;right:12px;background:#16a34a;color:#fff;border-radius:16px;padding:14px 16px;z-index:300;box-shadow:0 4px 20px rgba(0,0,0,.2);display:none;align-items:center;gap:12px">
+// ── BANNER PWA ────────────────────────────────────────────────
+</script>
+<div id="banner-instalar" style="display:none;position:fixed;bottom:80px;left:12px;right:12px;background:#16a34a;color:#fff;border-radius:16px;padding:14px 16px;z-index:300;box-shadow:0 4px 20px rgba(0,0,0,.2);align-items:center;gap:12px">
   <img src="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Money%20with%20wings/3D/money_with_wings_3d.png" style="width:36px;height:36px"/>
   <div style="flex:1">
     <div style="font-weight:700;font-size:14px">Instalar GastôMetro</div>
@@ -1373,4 +1385,8 @@ function fecharBannerInstalar(){
   if(b)b.style.display='none';
   localStorage.setItem('gmPwaFechado','1');
 }
+window.instalarPWA=instalarPWA;
+window.fecharBannerInstalar=fecharBannerInstalar;
 </script>
+</body>
+</html>
