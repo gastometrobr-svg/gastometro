@@ -668,19 +668,21 @@ let pizzaChart=null,barChart=null;
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
 let _codigoRecem='';
 let _unsubListener=null;
+let _ultimoSave=0; // timestamp do último save local
 
 // ── LISTENER TEMPO REAL (onSnapshot) ────────────────────────
 function iniciarListener(codigo){
-  if(_unsubListener)_unsubListener(); // cancela listener anterior se existir
+  if(_unsubListener)_unsubListener();
   _unsubListener=onSnapshot(doc(db,'gastometro_usuarios',codigo),(snap)=>{
     if(!snap.exists()||!usuarioLogado)return;
+    // Igual ao Contas de Casa: ignora snapshots nos 4s após um save local
+    // para não sobrescrever dados que ainda estão sendo enviados ao Firebase
+    if(Date.now()-_ultimoSave<4000)return;
     const fu=snap.data();
-    // Atualiza estado em memória
     S.renda=fu.renda||0;
     S.transactions=fu.transactions||[];
     S.fixedExpenses=fu.fixedExpenses||[];
     S.lastYM=fu.lastYM||'';
-    // Renova cache local
     localStorage.setItem('gmCache_'+codigo,JSON.stringify({
       nome:fu.nome,codigo:fu.codigo,senhaHash:fu.senhaHash,
       primeiroAcesso:false,renda:fu.renda||0,
@@ -688,7 +690,7 @@ function iniciarListener(codigo){
       lastYM:fu.lastYM||'',theme:fu.theme||S.theme
     }));
     render();renderFixedList();
-  },()=>{}); // ignora erros de conexão silenciosamente
+  },()=>{});
 }
 
 // ── POPUP SISTEMA ────────────────────────────────────────────
@@ -937,10 +939,9 @@ function abrirApp(){
 // ── SAVE ─────────────────────────────────────────────────────
 async function save(){
   if(!usuarioLogado)return;
-  // Salva no localStorage imediatamente
+  _ultimoSave=Date.now(); // marca o momento do save para o listener não sobrescrever
   const cache={nome:usuarioLogado.nome,codigo:usuarioLogado.codigo,senhaHash:usuarioLogado.senhaHash,primeiroAcesso:false,renda:S.renda,transactions:S.transactions,fixedExpenses:S.fixedExpenses,lastYM:S.lastYM,theme:S.theme};
   localStorage.setItem('gmCache_'+usuarioLogado.codigo,JSON.stringify(cache));
-  // Salva no Firebase em background
   try{
     await updateDoc(doc(db,'gastometro_usuarios',usuarioLogado.codigo),{
       renda:S.renda,transactions:S.transactions,fixedExpenses:S.fixedExpenses,lastYM:S.lastYM,theme:S.theme
@@ -1008,13 +1009,32 @@ function render(){
   histEl.innerHTML=hmsFiltrados.map((hm,i)=>{const t=getTotalMonth(hm.y,hm.m);const prev=i<hmsFiltrados.length-1?getTotalMonth(hmsFiltrados[i+1].y,hmsFiltrados[i+1].m):null;let diffHtml='';if(prev!==null&&prev>0){const diff=((t-prev)/prev*100).toFixed(0);const up=t>prev;diffHtml=`<div class="hist-diff ${up?'up':'down'}">${up?'+':'-'}${Math.abs(diff)}%</div>`;}const cnt=getMonthTx(hm.y,hm.m).length;return`<div class="hist-row"><div class="hist-row-top"><div class="hist-row-name">${MONTHS[hm.m]} ${hm.y}${hm.y===y&&hm.m===m?' (Atual)':''}</div><div class="hist-row-val">${fmt(t)}</div></div><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:12px;color:var(--text3)">${cnt} lançamento${cnt!==1?'s':''}</div>${diffHtml}</div></div>`;}).join('');
 }
 
-function getMonthTx(y,m){return S.transactions.filter(t=>{const d=new Date(t.date+'T00:00:00');return d.getFullYear()===y&&d.getMonth()===m;});}
+function getMonthTx(y,m){
+  const real=S.transactions.filter(t=>{const d=new Date(t.date+'T00:00:00');return d.getFullYear()===y&&d.getMonth()===m;});
+  // Para meses futuros, adicionar gastos fixos como preview (agendados)
+  const now=new Date();
+  const isFuture=(y>now.getFullYear())||(y===now.getFullYear()&&m>now.getMonth());
+  if(isFuture&&S.fixedExpenses&&S.fixedExpenses.length){
+    const dateStr=y+'-'+String(m+1).padStart(2,'0')+'-01';
+    const idsJaLancados=new Set(real.filter(t=>t.fixed||t.parceladoId).map(t=>t.parceladoId||t.desc));
+    S.fixedExpenses.forEach(fe=>{
+      if(fe.parcelado){
+        if((fe.parcelaAtual||0)<fe.totalParcelas){
+          real.push({id:'preview_'+fe.id,desc:`${fe.desc} (${(fe.parcelaAtual||0)+1}/${fe.totalParcelas})`,cat:fe.cat||'outros',val:fe.valores?fe.valores[fe.parcelaAtual||0]:fe.val,date:dateStr,paid:false,preview:true});
+        }
+      } else {
+        real.push({id:'preview_'+fe.id,desc:fe.desc,cat:fe.cat,val:fe.val,date:dateStr,paid:false,preview:true,fixed:true});
+      }
+    });
+  }
+  return real;
+}
 function getTotalMonth(y,m){return getMonthTx(y,m).reduce((a,t)=>a+t.val,0);}
 
 function renderTxList(elId,txs,deletable){
   const el=document.getElementById(elId);
   if(!txs.length){el.innerHTML='<div class="empty"><div class="empty-icon"><img src="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Money%20with%20wings/3D/money_with_wings_3d.png" style="width:56px;height:56px"/></div><div class="empty-text">Nenhum gasto encontrado.<br>Toque no + para adicionar.</div></div>';return;}
-  el.innerHTML=`<div class="tx-list">${txs.map(t=>{const c=getCat(t.cat);const dateStr=new Date(t.date+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});const payBadge=t.pay==='credito'?'<span style="font-size:11px;background:#dcfce7;color:#15803d;border-radius:4px;padding:1px 6px;font-weight:700">Credito</span>':'<span style="font-size:11px;background:#f1f5f9;color:var(--text3);border-radius:4px;padding:1px 6px">Debito</span>';const paidClass=t.paid?'pago':'pendente';const paidLabel=t.paid?'Pago':'Pagar';const strikeStyle=t.paid?'text-decoration:line-through;opacity:.6':'';return`<div class="tx" style="${t.paid?'opacity:.85':''}"><div class="tx-info"><div class="tx-desc" style="${strikeStyle}">${t.desc}</div><div class="tx-meta">${dateStr} · ${payBadge}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div><button class="tx-paid-btn ${paidClass}" onclick="window.togglePaid('${t.id}')">${paidLabel}</button></div>${deletable?`<button class="tx-del" onclick="window.deletarGasto('${t.id}')">🗑</button>`:''}</div>`;}).join('')}</div>`;
+  el.innerHTML=`<div class="tx-list">${txs.map(t=>{const c=getCat(t.cat);const dateStr=new Date(t.date+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});const paidClass=t.paid?'pago':'pendente';const paidLabel=t.paid?'Pago':'Pagar';const strikeStyle=t.paid?'text-decoration:line-through;opacity:.6':'';const isPreview=t.preview===true;if(isPreview){return`<div class="tx"><div class="tx-info"><div class="tx-desc">🔁 ${t.desc}</div><div class="tx-meta">Gasto fixo</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div></div></div>`;}return`<div class="tx" style="${t.paid?'opacity:.85':''}"><div class="tx-info"><div class="tx-desc" style="${strikeStyle}">${t.desc}</div><div class="tx-meta">${dateStr}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div><button class="tx-paid-btn ${paidClass}" onclick="window.togglePaid('${t.id}')">${paidLabel}</button></div>${deletable?`<button class="tx-del" onclick="window.deletarGasto('${t.id}')">🗑</button>`:''}</div>`;}).join('')}</div>`;
 }
 
 window.togglePaid=function(id){
@@ -1035,14 +1055,18 @@ function openModal(){document.getElementById('modal-bg').classList.remove('hidde
   const _minDate=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0')+'-01';
   const _inpData=document.getElementById('inp-data');
   _inpData.value=_now.toISOString().split('T')[0];
-  _inpData.min=_minDate;selectedCat='outros';selectedPayment='dinheiro';isFixedExpense=false;document.getElementById('fixed-toggle-row').classList.remove('active');renderCatGrid();setTimeout(()=>document.getElementById('inp-valor').focus(),100);}
+  _inpData.min=_minDate;selectedCat='outros';selectedPayment='dinheiro';isFixedExpense=false;document.getElementById('fixed-toggle-row').classList.remove('active');document.querySelectorAll('#pay-toggle .pay-opt').forEach(b=>b.classList.remove('selected'));const _pd=document.getElementById('pay-dinheiro');if(_pd)_pd.classList.add('selected');renderCatGrid();setTimeout(()=>document.getElementById('inp-valor').focus(),100);}
 function toggleFixedFlag(){isFixedExpense=!isFixedExpense;document.getElementById('fixed-toggle-row').classList.toggle('active',isFixedExpense);}
 function closeModalBg(e){if(e.target===document.getElementById('modal-bg'))closeModal();}
 function closeModal(){document.getElementById('modal-bg').classList.add('hidden');}
 function renderCatGrid(){}
 window.selectCat=function(id){selectedCat=id;renderCatGrid();};
 function detectCategory(){}
-function selectPayment(type){selectedPayment=type;}
+function selectPayment(type,el){
+  selectedPayment=type;
+  document.querySelectorAll('#pay-toggle .pay-opt').forEach(b=>b.classList.remove('selected'));
+  if(el)el.classList.add('selected');
+}
 function addExpense(){
   const val=parseFloat(document.getElementById('inp-valor').value);
   const desc=document.getElementById('inp-desc').value.trim();
@@ -1072,7 +1096,7 @@ function confirmarLimpar(){showPopup({icon:'⚠️',title:'Limpar dados',msg:'Ap
 
 // ── GASTOS FIXOS ──────────────────────────────────────────────
 let fxSelectedCat='contas',fxSelectedPayment='dinheiro';
-function renderFixedList(){const el=document.getElementById('fixed-list');if(!el)return;if(!S.fixedExpenses||!S.fixedExpenses.length){el.innerHTML='<div class="empty-fixed">Nenhum gasto fixo cadastrado</div>';return;}el.innerHTML=S.fixedExpenses.map(fe=>{return`<div class="fixed-item"><div class="fixed-item-info"><div class="fixed-item-desc">${fe.desc}</div><div class="fixed-item-meta">${fe.pay==='credito'?'Credito':'Debito'}</div></div><div class="fixed-item-val">${fmt(fe.val)}</div><button class="fixed-item-del" onclick="window.deleteFixed('${fe.id}')">x</button></div>`;}).join('');}
+function renderFixedList(){const el=document.getElementById('fixed-list');if(!el)return;if(!S.fixedExpenses||!S.fixedExpenses.length){el.innerHTML='<div class="empty-fixed">Nenhum gasto fixo cadastrado</div>';return;}const payLabelsF={credito:'Crédito',debito:'Débito',pix:'Pix',dinheiro:'Dinheiro'};el.innerHTML=S.fixedExpenses.map(fe=>{const payLbl=payLabelsF[fe.pay]||'';return`<div class="fixed-item"><div class="fixed-item-info"><div class="fixed-item-desc">${fe.desc}</div>${payLbl?`<div class="fixed-item-meta">${payLbl}</div>`:''}</div><div class="fixed-item-val">${fmt(fe.val)}</div><button class="fixed-item-del" onclick="window.deleteFixed('${fe.id}')">x</button></div>`;}).join('');}
 function openFixedModal(){fxSelectedCat='contas';fxSelectedPayment='dinheiro';document.getElementById('fx-valor').value='';document.getElementById('fx-desc').value='';renderFxCatGrid();document.getElementById('fixed-modal-bg').classList.remove('hidden');}
 function closeFixedModalBg(e){if(e.target===document.getElementById('fixed-modal-bg'))closeFixedModal();}
 function closeFixedModal(){document.getElementById('fixed-modal-bg').classList.add('hidden');}
