@@ -1158,14 +1158,14 @@ window.salvarParcelado=salvarParcelado;
 
 // ── BOOT ─────────────────────────────────────────────────────
 async function init(){
-  // Carrega Chart.js e aguarda delay mínimo do splash
   const splashMin = new Promise(res=>setTimeout(res,2000));
+  // Carrega Chart.js
   await new Promise(res=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';s.onload=res;s.onerror=res;document.head.appendChild(s);});
   if(isAdmin){await splashMin;initAdmin();return;}
   // Auto-login
-  const codigoSalvo=localStorage.getItem('gmLogado');
-  if(codigoSalvo){
-    try{
+  try{
+    const codigoSalvo=localStorage.getItem('gmLogado');
+    if(codigoSalvo){
       const snap=await getDoc(doc(db,'gastometro_usuarios',codigoSalvo));
       if(snap.exists()){
         const u=snap.data();
@@ -1173,10 +1173,11 @@ async function init(){
         S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
         await splashMin;
         document.getElementById('splash').classList.add('hidden');
-        abrirApp();return;
+        abrirApp();
+        return;
       }
-    }catch(e){}
-  }
+    }
+  }catch(e){console.warn('Auto-login falhou:',e);}
   await splashMin;
   document.getElementById('splash').classList.add('hidden');
   document.getElementById('tela-login').classList.remove('hidden');
