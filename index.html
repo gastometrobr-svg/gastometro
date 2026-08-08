@@ -938,7 +938,7 @@ function render(){
   const bycat={};txs.forEach(t=>{bycat[t.cat]=(bycat[t.cat]||0)+t.val;});
   const sortedCats=Object.entries(bycat).sort((a,b)=>b[1]-a[1]);
   const catEl=document.getElementById('cat-breakdown');
-  if(!sortedCats.length){catEl.innerHTML='<div class="empty"><div class="empty-icon">🏷️</div><div class="empty-text">Nenhum gasto este mês</div></div>';}
+  if(catEl&&!sortedCats.length){catEl.innerHTML='<div class="empty"><div class="empty-icon">🏷️</div><div class="empty-text">Nenhum gasto este mês</div></div>';}
   
   renderTxList('all-tx-list',[...txs].sort((a,b)=>b.date.localeCompare(a.date)),true);
   if(pizzaChart){pizzaChart.destroy();pizzaChart=null;}
