@@ -171,11 +171,11 @@ body{font-family:var(--f-body);background:var(--bg);color:var(--text);min-height
 .tx+.tx{border-top:1px dashed var(--border)}
 
 .tx-info{flex:1;min-width:0}
-.tx-desc{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--f-body)}
+.tx-desc{font-size:14px;font-weight:600;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3;font-family:var(--f-body)}
 .tx-meta{font-size:11px;color:var(--text3);margin-top:2px;font-family:var(--f-mono)}
 .tx-val{font-size:15px;font-weight:700;color:var(--red);flex-shrink:0;font-family:var(--f-mono)}
-.tx-del{background:transparent;border:none;color:var(--red);cursor:pointer;padding:6px 8px;font-size:15px;border-radius:8px;margin-left:2px;opacity:.7}
-.tx-edit{background:transparent;border:none;color:var(--text3);cursor:pointer;padding:6px 8px;font-size:15px;border-radius:8px;margin-left:2px;opacity:.7}
+.tx-del{background:transparent;border:none;color:var(--red);cursor:pointer;padding:6px 7px;border-radius:8px;margin-left:2px;opacity:.75;display:flex;align-items:center}
+.tx-edit{background:transparent;border:none;color:var(--text3);cursor:pointer;padding:6px 7px;border-radius:8px;margin-left:2px;opacity:.75;display:flex;align-items:center}
 .chart-wrap{position:relative;width:100%;aspect-ratio:4/2.2;max-height:180px}
 .cat-legend-row{display:flex;align-items:center;gap:10px;padding:8px 0}
 .cat-legend-row+.cat-legend-row{border-top:1px dashed var(--border)}
@@ -728,6 +728,9 @@ function catIconSvg(id,size){
   const d=CAT_ICON_PATHS[id]||CAT_ICON_PATHS.outros;
   return `<svg viewBox="0 0 20 20" width="${size||18}" height="${size||18}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 }
+// Ícones de ação (editar/excluir) no mesmo estilo de linha fina — em vez de emoji de sistema
+function iconLapis(size){return `<svg viewBox="0 0 20 20" width="${size||16}" height="${size||16}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 3.5l3 3L6 17H3v-3z"/></svg>`;}
+function iconLixeira(size){return `<svg viewBox="0 0 20 20" width="${size||16}" height="${size||16}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5h14"/><path d="M7.5 5.5V4a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1.5"/><path d="M5.5 5.5l.7 10a1.5 1.5 0 0 0 1.5 1.4h4.6a1.5 1.5 0 0 0 1.5-1.4l.7-10"/><path d="M8.3 9v5M11.7 9v5"/></svg>`;}
 
 const MONTHS=['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const MONTHS_SHORT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -1221,7 +1224,7 @@ function getTotalMonth(y,m){return getMonthTx(y,m).reduce((a,t)=>a+t.val,0);}
 function renderTxList(elId,txs,deletable){
   const el=document.getElementById(elId);
   if(!txs.length){el.innerHTML='<div class="empty"><div class="empty-icon"><img src="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Money%20with%20wings/3D/money_with_wings_3d.png" style="width:56px;height:56px"/></div><div class="empty-text">Nenhum gasto encontrado.<br>Toque no + para adicionar.</div></div>';return;}
-  el.innerHTML=`<div class="tx-list">${txs.map(t=>{const c=getCat(t.cat);const venc=t.vencimento||t.date;const dateStr=venc?new Date(venc+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):'';const paidClass=t.paid?'pago':'pendente';const paidLabel=t.paid?'Pago':'Pagar';const strikeStyle=t.paid?'text-decoration:line-through;opacity:.6':'';return`<div class="tx" style="${t.paid?'opacity:.85':''}border-left-color:${c.color}"><div class="tx-info"><div class="tx-desc" style="${strikeStyle}"><span title="${c.name}" style="display:inline-flex;vertical-align:-3px;color:${c.color};margin-right:4px">${catIconSvg(c.id,15)}</span>${t.desc}</div>${dateStr?`<div class="tx-meta">${dateStr}</div>`:''}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div><button class="tx-paid-btn ${paidClass}" onclick="window.togglePaid('${t.id}')">${paidLabel}</button></div>${deletable?`<button class="tx-edit" onclick="window.editarGasto('${t.id}')">✏️</button><button class="tx-del" onclick="window.deletarGasto('${t.id}')">🗑</button>`:''}</div>`;}).join('')}</div>`;
+  el.innerHTML=`<div class="tx-list">${txs.map(t=>{const c=getCat(t.cat);const venc=t.vencimento||t.date;const dateStr=venc?new Date(venc+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):'';const paidClass=t.paid?'pago':'pendente';const paidLabel=t.paid?'Pago':'Pagar';const strikeStyle=t.paid?'text-decoration:line-through;opacity:.6':'';return`<div class="tx" style="${t.paid?'opacity:.85':''}border-left-color:${c.color}"><div class="tx-info"><div class="tx-desc" style="${strikeStyle}"><span title="${c.name}" style="display:inline-flex;vertical-align:-3px;color:${c.color};margin-right:4px">${catIconSvg(c.id,15)}</span>${t.desc}</div>${dateStr?`<div class="tx-meta">${dateStr}</div>`:''}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div><button class="tx-paid-btn ${paidClass}" onclick="window.togglePaid('${t.id}')">${paidLabel}</button></div>${deletable?`<button class="tx-edit" onclick="window.editarGasto('${t.id}')">${iconLapis(16)}</button><button class="tx-del" onclick="window.deletarGasto('${t.id}')">${iconLixeira(16)}</button>`:''}</div>`;}).join('')}</div>`;
 }
 
 window.togglePaid=function(id){
