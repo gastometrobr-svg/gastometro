@@ -246,20 +246,6 @@ body{font-family:var(--f-body);background:var(--bg);color:var(--text);min-height
 .btn-ghost{background:none;border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer}
 .btn-primary{background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer}
 
-/* ── TUTORIAL ── */
-#tutorial-overlay{position:fixed;inset:0;z-index:1000;pointer-events:none}
-#tutorial-overlay.hidden{display:none}
-.tut-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55)}
-.tut-card{position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-radius:20px 20px 0 0;padding:28px 24px 40px;pointer-events:all}
-.tut-step{font-size:11px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
-.tut-title{font-family:var(--f-display);font-size:21px;font-weight:700;color:var(--text);margin-bottom:8px}
-.tut-desc{font-size:15px;color:var(--text2);line-height:1.5;margin-bottom:24px}
-.tut-dots{display:flex;gap:6px;justify-content:center;margin-bottom:20px}
-.tut-dot{width:8px;height:8px;border-radius:50%;background:var(--border)}
-.tut-dot.active{background:var(--primary);width:20px;border-radius:4px}
-.tut-btn{width:100%;background:var(--primary);color:#fff;border:none;border-radius:12px;padding:16px;font-family:var(--f-body);font-size:16px;font-weight:700;cursor:pointer}
-.tut-skip{width:100%;background:none;border:none;color:var(--text3);font-size:13px;padding:12px;cursor:pointer;margin-top:4px}
-
 /* ── POPUP CUSTOMIZADO (substitui alert/confirm/prompt) ── */
 .popup-overlay{position:fixed;inset:0;background:rgba(20,18,10,.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
 .popup-overlay.hidden{display:none}
@@ -491,7 +477,6 @@ body{font-family:var(--f-body);background:var(--bg);color:var(--text);min-height
       <div class="card">
         <div class="card-title">Preferencias</div>
         <div class="set-row"><div class="set-label">Renda Mensal</div><button class="btn-ghost" onclick="editRenda()" id="renda-btn">R$ 0,00</button></div>
-        <div class="set-row"><div class="set-label">Ver tutorial novamente</div><button onclick="startTutorial()" style="background:none;border:none;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">Ver</button></div>
       <div style="text-align:center;padding:16px 0 4px;font-size:11px;color:var(--text3)">GastôMetro v1.0.0</div>
       </div>
     </div>
@@ -667,19 +652,6 @@ body{font-family:var(--f-body);background:var(--bg);color:var(--text);min-height
     <div class="popup-msg" id="popup-msg">Mensagem</div>
     <input type="text" class="popup-input hidden" id="popup-input" placeholder=""/>
     <div class="popup-btns" id="popup-btns"></div>
-  </div>
-</div>
-
-<!-- TUTORIAL -->
-<div id="tutorial-overlay" class="hidden">
-  <div class="tut-backdrop" onclick="skipTutorial()"></div>
-  <div class="tut-card">
-    <div class="tut-step" id="tut-step-label">Passo 1 de 4</div>
-    <div class="tut-title" id="tut-title"></div>
-    <div class="tut-desc" id="tut-desc"></div>
-    <div class="tut-dots" id="tut-dots"></div>
-    <button class="tut-btn" id="tut-next-btn" onclick="tutNext()">Próximo</button>
-    <button class="tut-skip" onclick="skipTutorial()">Pular Tutorial</button>
   </div>
 </div>
 
@@ -1113,8 +1085,6 @@ function abrirApp(){
   migrarCategoriasLegado();
   migrarCategoriasVinculadas();
   render();
-  const jaViu=localStorage.getItem('gmTut_'+usuarioLogado.codigo);
-  if(!jaViu)setTimeout(startTutorial,600);
 }
 
 // ── FOTO DE PERFIL ──────────────────────────────────────────────
@@ -1566,27 +1536,7 @@ function salvarRenda(){const n=parseFloat(document.getElementById('inp-renda').v
 function confirmarLimpar(){showPopup({icon:'⚠️',title:'Limpar dados',msg:'Apagar todos os gastos deste mes?',btns:[{label:'Cancelar',style:'ghost'},{label:'Limpar',style:'danger',action:()=>{const y=S.currentYear,m=S.currentMonth;const targetYM=y+'-'+String(m+1).padStart(2,'0');S.transactions=S.transactions.filter(t=>{if(t.mesReferencia)return t.mesReferencia!==targetYM;if(!t.date)return true;const d=new Date(t.date+'T00:00:00');return!(d.getFullYear()===y&&d.getMonth()===m);});save();render();toast('Dados do mes limpos');}}]});}
 
 // ── TUTORIAL ──────────────────────────────────────────────────
-const TUT_STEPS=[
-  {icon:'💸',title:'Bem-vindo ao GastôMetro!',desc:'Controle seus gastos mensais de forma simples e inteligente. Vamos te mostrar como usar!'},
-  {icon:'➕',title:'Adicionar um gasto',desc:'Toque no botão + para lançar um gasto. Digite a descricao e o app detecta a categoria automaticamente!'},
-  {icon:'✓',title:'Marcar como pago',desc:'Toque em "Pagar" em qualquer gasto para marcar como pago. Assim você acompanha o que ainda está pendente.'},
-  {icon:'📊',title:'Aba Resumo',desc:'Veja quanto gastou, quanto sobra da sua renda e um grafico por categoria. Atualize sua renda nas Configuracoes.'},
-  {icon:'🔁',title:'Mês de referência',desc:'Ao cadastrar um gasto, escolha o mês de referência — é ele que decide em qual mês o gasto entra, não a data de vencimento.'},
-  {icon:'📅',title:'Histórico Mensal',desc:'Na aba Histórico você vê os gastos dos últimos 6 meses e compara a evolução mês a mês.'},
-];
-let tutStep=0;
-function startTutorial(){tutStep=0;renderTutStep();document.getElementById('tutorial-overlay').classList.remove('hidden');}
-function renderTutStep(){
-  const s=TUT_STEPS[tutStep];
-  document.getElementById('tut-step-label').textContent=tutStep===0?'Introducao':'Passo '+tutStep+' de '+(TUT_STEPS.length-1);
-  document.getElementById('tut-title').textContent=s.icon+' '+s.title;
-  document.getElementById('tut-desc').textContent=s.desc;
-  document.getElementById('tut-next-btn').textContent=tutStep<TUT_STEPS.length-1?'Próximo':'Vamos la!';
-  const dots=document.getElementById('tut-dots');
-  dots.innerHTML=TUT_STEPS.map((_,i)=>`<div class="tut-dot${i===tutStep?' active':''}"></div>`).join('');
-}
-function tutNext(){if(tutStep<TUT_STEPS.length-1){tutStep++;renderTutStep();}else{skipTutorial();}}
-function skipTutorial(){document.getElementById('tutorial-overlay').classList.add('hidden');if(usuarioLogado)localStorage.setItem('gmTut_'+usuarioLogado.codigo,'1');}
+
 
 // ── EXPOR FUNCOES GLOBAIS ─────────────────────────────────────
 window.fazerLogin=fazerLogin;
@@ -1621,9 +1571,6 @@ window.editRenda=editRenda;
 window.closeModalRenda=closeModalRenda;
 window.salvarRenda=salvarRenda;
 window.confirmarLimpar=confirmarLimpar;
-window.startTutorial=startTutorial;
-window.tutNext=tutNext;
-window.skipTutorial=skipTutorial;
 window.sairAdmin=sairAdmin;
 
 
