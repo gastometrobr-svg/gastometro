@@ -478,6 +478,13 @@ body{font-family:var(--f-body);background:var(--bg);color:var(--text);min-height
     <div id="panel-config" class="panel">
       <div class="card">
         <div class="card-title">Minha conta</div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+          <div class="hdr-avatar" id="config-avatar" onclick="document.getElementById('inp-foto').click()" title="Toque para trocar a foto" style="width:64px;height:64px;background:var(--primary-light);border-color:var(--border);flex-shrink:0">
+            <img id="config-avatar-img" style="display:none"/>
+            <span id="config-avatar-fallback" style="color:var(--primary);font-size:22px">?</span>
+          </div>
+          <button class="btn-primary" onclick="document.getElementById('inp-foto').click()" style="font-size:12px">Trocar foto</button>
+        </div>
         <div class="set-row"><div><div class="set-label" id="config-nome-usuario">—</div><div class="set-val">Código: <span id="config-codigo-usuario">—</span></div></div><button class="btn-primary" onclick="abrirTrocaNome()">Alterar</button></div>
         <div class="set-row"><div class="set-label">Alterar Senha</div><button class="btn-primary" onclick="abrirTrocaSenhaVoluntaria()">Alterar</button></div>
         <div class="set-row"><div class="set-label">Sair</div><button onclick="confirmarSair()" style="background:none;border:none;color:var(--red);font-size:13px;font-weight:600;cursor:pointer">Sair</button></div>
@@ -685,7 +692,6 @@ body{font-family:var(--f-body);background:var(--bg);color:var(--text);min-height
 // ── FIREBASE ────────────────────────────────────────────────
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 
 // !! SUBSTITUA PELAS SUAS CREDENCIAIS DO FIREBASE !!
 const firebaseConfig = {
@@ -699,7 +705,7 @@ const firebaseConfig = {
 
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
-const storage = getStorage(fbApp);
+
 
 // ── CATEGORIES ──────────────────────────────────────────────
 const CATS=[
@@ -760,6 +766,8 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 let _codigoRecem='';
 let _unsubListener=null;
 let _ultimoSave=0; // timestamp do último save local
+let _saveFalhouPendente=false; // true enquanto tem uma mudança local que ainda não conseguiu salvar no Firebase
+let _retrySaveTimeout=null;
 
 // ── LISTENER TEMPO REAL (onSnapshot) ────────────────────────
 function iniciarListener(codigo){
@@ -767,18 +775,20 @@ function iniciarListener(codigo){
   _unsubListener=onSnapshot(doc(db,'gastometro_usuarios',codigo),(snap)=>{
     if(!snap.exists()||!usuarioLogado)return;
     // Igual ao Contas de Casa: ignora snapshots nos 4s após um save local
-    // para não sobrescrever dados que ainda estão sendo enviados ao Firebase
-    if(Date.now()-_ultimoSave<4000)return;
+    // para não sobrescrever dados que ainda estão sendo enviados ao Firebase.
+    // Além disso, se ainda tiver um save falhado/pendente de reenvio, NUNCA aceita
+    // o snapshot (que teria dados antigos) até a sincronização realmente dar certo —
+    // evita perder silenciosamente uma mudança que ainda não foi salva de verdade.
+    if(_saveFalhouPendente||Date.now()-_ultimoSave<4000)return;
     const fu=snap.data();
     S.renda=fu.renda||0;
     S.transactions=fu.transactions||[];
     S.fixedExpenses=fu.fixedExpenses||[];
     S.recorrentes=fu.recorrentes||[];
     S.lastYM=fu.lastYM||'';
-    if(usuarioLogado)usuarioLogado.fotoUrl=fu.fotoUrl||usuarioLogado.fotoUrl;
     localStorage.setItem('gmCache_'+codigo,JSON.stringify({
       nome:fu.nome,codigo:fu.codigo,senhaHash:fu.senhaHash,
-      primeiroAcesso:false,renda:fu.renda||0,fotoUrl:fu.fotoUrl||null,
+      primeiroAcesso:false,renda:fu.renda||0,
       transactions:fu.transactions||[],fixedExpenses:fu.fixedExpenses||[],recorrentes:fu.recorrentes||[],
       lastYM:fu.lastYM||'',theme:fu.theme||S.theme
     }));
@@ -959,7 +969,7 @@ async function fazerLogin(){
     usuarioLogado=u;
     localStorage.setItem('gmLogado',u.codigo);
     S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],recorrentes:u.recorrentes||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
-    localStorage.setItem('gmCache_'+u.codigo,JSON.stringify({nome:u.nome,codigo:u.codigo,senhaHash:u.senhaHash,primeiroAcesso:false,renda:u.renda||0,fotoUrl:u.fotoUrl||null,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],recorrentes:u.recorrentes||[],lastYM:u.lastYM||'',theme:u.theme||'light'}));
+    localStorage.setItem('gmCache_'+u.codigo,JSON.stringify({nome:u.nome,codigo:u.codigo,senhaHash:u.senhaHash,primeiroAcesso:false,renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],recorrentes:u.recorrentes||[],lastYM:u.lastYM||'',theme:u.theme||'light'}));
     loadEl.classList.add('hidden');
     if(u.primeiroAcesso){
       document.getElementById('tela-login').classList.add('hidden');
@@ -1030,7 +1040,7 @@ async function salvarTrocaNome(){
 function confirmarSair(){
   showPopup({icon:'👋',title:'Sair',msg:'Deseja sair do GastôMetro?',btns:[
     {label:'Cancelar',style:'ghost'},
-    {label:'Sair',style:'danger',action:()=>{localStorage.removeItem('gmLogado');usuarioLogado=null;S={renda:0,transactions:[],fixedExpenses:[],recorrentes:[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:'',theme:'light'};document.getElementById('app').classList.add('hidden');document.getElementById('tela-login').classList.remove('hidden');document.getElementById('login-codigo').value='';document.getElementById('login-senha').value='';}}
+    {label:'Sair',style:'danger',action:()=>{if(_retrySaveTimeout){clearTimeout(_retrySaveTimeout);_retrySaveTimeout=null;}_saveFalhouPendente=false;localStorage.removeItem('gmLogado');usuarioLogado=null;S={renda:0,transactions:[],fixedExpenses:[],recorrentes:[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:'',theme:'light'};document.getElementById('app').classList.add('hidden');document.getElementById('tela-login').classList.remove('hidden');document.getElementById('login-codigo').value='';document.getElementById('login-senha').value='';}}
   ]});
 }
 
@@ -1083,6 +1093,7 @@ function abrirApp(){
   document.getElementById('config-nome-usuario').textContent=usuarioLogado.nome;
   document.getElementById('config-codigo-usuario').textContent=usuarioLogado.codigo;
   renderAvatar();
+  carregarFotoUsuario(usuarioLogado.codigo);
   if(S.theme==='dark'){document.documentElement.setAttribute('data-theme','dark');document.getElementById('theme-toggle').classList.add('on');}
   checkMonthRollover();
   garantirRecorrentesAte(S.currentYear,S.currentMonth);
@@ -1094,50 +1105,93 @@ function abrirApp(){
 }
 
 // ── FOTO DE PERFIL ──────────────────────────────────────────────
+// Guardada em base64 num documento SEPARADO do principal (coleção 'gastometro_fotos'),
+// pra nunca pesar nas leituras/gravações normais de gastos (mesma lógica do Contas de Casa).
+let _unsubListenerFoto=null;
 function renderAvatar(){
+  const temFoto=usuarioLogado&&usuarioLogado.fotoUrl;
+  const inicial=(usuarioLogado&&usuarioLogado.nome)?usuarioLogado.nome.trim()[0].toUpperCase():'?';
   const img=document.getElementById('hdr-avatar-img');
   const fallback=document.getElementById('hdr-avatar-fallback');
-  if(!img||!fallback)return;
-  if(usuarioLogado&&usuarioLogado.fotoUrl){
-    img.src=usuarioLogado.fotoUrl;img.style.display='block';fallback.style.display='none';
-  }else{
-    img.style.display='none';fallback.style.display='flex';
-    fallback.textContent=(usuarioLogado&&usuarioLogado.nome)?usuarioLogado.nome.trim()[0].toUpperCase():'?';
+  if(img&&fallback){
+    if(temFoto){img.src=usuarioLogado.fotoUrl;img.style.display='block';fallback.style.display='none';}
+    else{img.style.display='none';fallback.style.display='flex';fallback.textContent=inicial;}
+  }
+  const imgCfg=document.getElementById('config-avatar-img');
+  const fallbackCfg=document.getElementById('config-avatar-fallback');
+  if(imgCfg&&fallbackCfg){
+    if(temFoto){imgCfg.src=usuarioLogado.fotoUrl;imgCfg.style.display='block';fallbackCfg.style.display='none';}
+    else{imgCfg.style.display='none';fallbackCfg.style.display='flex';fallbackCfg.textContent=inicial;}
   }
 }
-window.onFotoSelecionada=async function(e){
+function carregarFotoUsuario(codigo){
+  if(_unsubListenerFoto)_unsubListenerFoto();
+  _unsubListenerFoto=onSnapshot(doc(db,'gastometro_fotos',codigo),(snap)=>{
+    if(!usuarioLogado)return;
+    usuarioLogado.fotoUrl=(snap.exists()&&snap.data().foto)?snap.data().foto:null;
+    renderAvatar();
+  },()=>{});
+}
+window.onFotoSelecionada=function(e){
   const file=e.target.files[0];
   e.target.value=''; // permite escolher o mesmo arquivo de novo depois, se precisar
   if(!file||!usuarioLogado)return;
   if(!file.type.startsWith('image/')){toast('Escolha um arquivo de imagem');return;}
-  if(file.size>5*1024*1024){toast('Imagem muito grande (máx. 5MB)');return;}
-  toast('Enviando foto...');
-  try{
-    const storageRef=ref(storage,'avatars/'+usuarioLogado.codigo+'.jpg');
-    const timeoutUpload=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout no upload')),15000));
-    await Promise.race([uploadBytes(storageRef,file),timeoutUpload]);
-    const url=await Promise.race([getDownloadURL(storageRef),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout ao obter link')),15000))]);
-    usuarioLogado.fotoUrl=url;
-    renderAvatar();
-    _ultimoSave=Date.now();
-    const cacheStr=localStorage.getItem('gmCache_'+usuarioLogado.codigo);
-    if(cacheStr){const c=JSON.parse(cacheStr);c.fotoUrl=url;localStorage.setItem('gmCache_'+usuarioLogado.codigo,JSON.stringify(c));}
-    await updateDoc(doc(db,'gastometro_usuarios',usuarioLogado.codigo),{fotoUrl:url});
-    toast('Foto atualizada!');
-  }catch(err){console.warn('Erro ao enviar foto:',err);toast('Erro ao enviar a foto ('+(err&&err.message?err.message:'falha desconhecida')+')');}
+  if(file.size>8*1024*1024){toast('Imagem muito grande (máx. 8MB)');return;}
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const img=new Image();
+    img.onload=async function(){
+      const canvas=document.createElement('canvas');
+      const max=200; // redimensiona pro lado maior ter no máx 200px, igual o Contas de Casa
+      let w=img.width,h=img.height;
+      if(w>h){if(w>max){h=h*max/w;w=max;}}else{if(h>max){w=w*max/h;h=max;}}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      const fotoB64=canvas.toDataURL('image/jpeg',0.7);
+      toast('Salvando foto...');
+      try{
+        await setDoc(doc(db,'gastometro_fotos',usuarioLogado.codigo),{foto:fotoB64},{merge:true});
+        usuarioLogado.fotoUrl=fotoB64;
+        renderAvatar();
+        toast('Foto atualizada!');
+      }catch(err){console.warn('Erro ao salvar foto:',err);toast('Erro ao salvar a foto. Tente de novo.');}
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
 };
 
 // ── SAVE ─────────────────────────────────────────────────────
 async function save(){
   if(!usuarioLogado)return;
   _ultimoSave=Date.now(); // marca o momento do save para o listener não sobrescrever
-  const cache={nome:usuarioLogado.nome,codigo:usuarioLogado.codigo,senhaHash:usuarioLogado.senhaHash,primeiroAcesso:false,renda:S.renda,fotoUrl:usuarioLogado.fotoUrl||null,transactions:S.transactions,fixedExpenses:S.fixedExpenses,recorrentes:S.recorrentes,lastYM:S.lastYM,theme:S.theme};
-  localStorage.setItem('gmCache_'+usuarioLogado.codigo,JSON.stringify(cache));
+  const cache={nome:usuarioLogado.nome,codigo:usuarioLogado.codigo,senhaHash:usuarioLogado.senhaHash,primeiroAcesso:false,renda:S.renda,transactions:S.transactions,fixedExpenses:S.fixedExpenses,recorrentes:S.recorrentes,lastYM:S.lastYM,theme:S.theme};
+  localStorage.setItem('gmCache_'+usuarioLogado.codigo,JSON.stringify(cache)); // isso aqui nunca falha, é local
   try{
     await updateDoc(doc(db,'gastometro_usuarios',usuarioLogado.codigo),{
       renda:S.renda,transactions:S.transactions,fixedExpenses:S.fixedExpenses,recorrentes:S.recorrentes,lastYM:S.lastYM,theme:S.theme
     });
-  }catch(e){console.warn('Erro ao salvar no Firebase:',e);}
+    if(_saveFalhouPendente){
+      _saveFalhouPendente=false;
+      if(_retrySaveTimeout){clearTimeout(_retrySaveTimeout);_retrySaveTimeout=null;}
+      toast('Sincronizado! ✅');
+    }
+  }catch(e){
+    console.warn('Erro ao salvar no Firebase:',e);
+    if(!_saveFalhouPendente){
+      _saveFalhouPendente=true;
+      toast('⚠️ Sem conexão com o servidor. Seus dados estão salvos aqui e vamos tentar sincronizar de novo automaticamente.');
+    }
+    agendarNovaTentativaSave();
+  }
+}
+function agendarNovaTentativaSave(){
+  if(_retrySaveTimeout)return; // já tem uma tentativa agendada, não duplica
+  _retrySaveTimeout=setTimeout(()=>{
+    _retrySaveTimeout=null;
+    save(); // tenta de novo com o estado atual (já inclui qualquer mudança feita nesse meio-tempo)
+  },8000);
 }
 
 
