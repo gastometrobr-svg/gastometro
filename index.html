@@ -1111,8 +1111,9 @@ window.onFotoSelecionada=async function(e){
   toast('Enviando foto...');
   try{
     const storageRef=ref(storage,'avatars/'+usuarioLogado.codigo+'.jpg');
-    await uploadBytes(storageRef,file);
-    const url=await getDownloadURL(storageRef);
+    const timeoutUpload=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout no upload')),15000));
+    await Promise.race([uploadBytes(storageRef,file),timeoutUpload]);
+    const url=await Promise.race([getDownloadURL(storageRef),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout ao obter link')),15000))]);
     usuarioLogado.fotoUrl=url;
     renderAvatar();
     _ultimoSave=Date.now();
@@ -1120,7 +1121,7 @@ window.onFotoSelecionada=async function(e){
     if(cacheStr){const c=JSON.parse(cacheStr);c.fotoUrl=url;localStorage.setItem('gmCache_'+usuarioLogado.codigo,JSON.stringify(c));}
     await updateDoc(doc(db,'gastometro_usuarios',usuarioLogado.codigo),{fotoUrl:url});
     toast('Foto atualizada!');
-  }catch(err){console.warn('Erro ao enviar foto:',err);toast('Erro ao enviar a foto. Tente de novo.');}
+  }catch(err){console.warn('Erro ao enviar foto:',err);toast('Erro ao enviar a foto ('+(err&&err.message?err.message:'falha desconhecida')+')');}
 };
 
 // ── SAVE ─────────────────────────────────────────────────────
