@@ -10,24 +10,34 @@
 <title>GastôMetro — Controle de Gastos</title>
 <link rel="manifest" href="manifest.json"/>
 <script>
+window.appPronto=false; // marcado como true pelo app assim que termina de carregar (login ou dashboard na tela)
+function solicitarReloadSW(){
+  // Se o app já terminou de carregar, recarrega na hora (comportamento de antes)
+  if(window.appPronto){window.location.reload();return;}
+  // Se ainda estiver carregando/logando, espera terminar antes de recarregar —
+  // evita cortar uma consulta ao Firebase no meio e travar a tela
+  const _check=setInterval(()=>{
+    if(window.appPronto){clearInterval(_check);window.location.reload();}
+  },1000);
+}
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').then(reg => {
       // Verifica atualização a cada 60 segundos
       setInterval(() => reg.update(), 60000);
-      // Quando novo SW está esperando, recarrega automaticamente
+      // Quando novo SW está esperando, recarrega automaticamente (com segurança, ver solicitarReloadSW)
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing;
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'activated') {
-            window.location.reload();
+            solicitarReloadSW();
           }
         });
       });
     }).catch(() => {});
-    // Se outro SW assumiu o controle (outro dispositivo atualizou), recarrega
+    // Se outro SW assumiu o controle (outro dispositivo atualizou), recarrega (com segurança)
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      window.location.reload();
+      solicitarReloadSW();
     });
   });
 }
@@ -158,6 +168,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 .tx-meta{font-size:12px;color:var(--text3);margin-top:1px}
 .tx-val{font-size:15px;font-weight:700;color:var(--red);flex-shrink:0}
 .tx-del{background:#fee2e2;border:none;color:#ef4444;cursor:pointer;padding:6px 10px;font-size:16px;border-radius:8px;margin-left:4px}
+.tx-edit{background:var(--surface2);border:none;color:var(--text2);cursor:pointer;padding:6px 10px;font-size:16px;border-radius:8px;margin-left:4px}
 .chart-wrap{position:relative;width:100%;aspect-ratio:4/2.2;max-height:180px}
 .hist-row{background:var(--surface);border-radius:var(--radius-sm);padding:14px 16px}
 .hist-row-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -192,12 +203,6 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 .pay-opt{padding:12px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);cursor:pointer;text-align:center;font-size:14px;font-weight:600;color:var(--text2);transition:all .15s}
 .pay-opt.selected{border-color:var(--primary);background:var(--primary-light);color:var(--primary)}
 .pay-opt .ico{font-size:22px;display:block;margin-bottom:4px}
-.fixed-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface2);border:2px solid var(--border);cursor:pointer;transition:border-color .15s;gap:12px}
-.fixed-toggle-row.active{border-color:var(--primary);background:var(--primary-light)}
-.fixed-toggle-sw{width:44px;height:26px;border-radius:13px;background:var(--border);position:relative;flex-shrink:0;transition:background .2s}
-.fixed-toggle-sw::after{content:'';position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
-.fixed-toggle-row.active .fixed-toggle-sw{background:var(--primary)}
-.fixed-toggle-row.active .fixed-toggle-sw::after{left:21px}
 .submit-btn{width:100%;padding:16px;border-radius:14px;background:var(--primary);color:#fff;border:none;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px}
 .submit-btn:active{transform:scale(.98)}
 .set-row{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--border)}
@@ -230,15 +235,6 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 .section-title{font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px}
 .btn-ghost{background:none;border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer}
 .btn-primary{background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer}
-.fixed-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
-.fixed-item{display:flex;align-items:center;gap:12px;background:var(--surface2);border-radius:10px;padding:12px 14px}
-.fixed-item-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.fixed-item-info{flex:1;min-width:0}
-.fixed-item-desc{font-size:14px;font-weight:600;color:var(--text)}
-.fixed-item-meta{font-size:12px;color:var(--text3);margin-top:1px}
-.fixed-item-val{font-size:14px;font-weight:700;color:var(--red);flex-shrink:0;margin-right:8px}
-.fixed-item-del{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px;flex-shrink:0}
-.empty-fixed{text-align:center;color:var(--text3);font-size:13px;padding:16px 0}
 
 /* ── TUTORIAL ── */
 #tutorial-overlay{position:fixed;inset:0;z-index:1000;pointer-events:none}
@@ -289,7 +285,6 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 
 
 /* ── PARCELADO ── */
-.parcela-badge{display:inline-block;background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:700;border-radius:4px;padding:1px 6px;margin-left:4px}
 
 /* ── TOAST ── */
 #toast-el{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:999px;font-size:14px;font-weight:600;z-index:9999;transition:opacity .3s;white-space:nowrap;pointer-events:none;opacity:0}
@@ -474,7 +469,6 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
         <div class="set-row"><div class="set-label">Ver tutorial novamente</div><button onclick="startTutorial()" style="background:none;border:none;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">Ver</button></div>
       <div style="text-align:center;padding:16px 0 4px;font-size:11px;color:var(--text3)">GastôMetro v1.0.0</div>
       </div>
-      <div style="display:none"><div id="fixed-list"></div></div>
     </div>
 
   </div>
@@ -542,49 +536,56 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 <div class="modal-bg hidden" id="modal-bg" onclick="closeModalBg(event)">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Novo Gasto</div>
+    <div class="modal-title" id="modal-titulo-gasto">Novo Gasto</div>
     <div class="field"><label>Valor (R$)</label><input type="number" id="inp-valor" class="amt-input" placeholder="0,00" inputmode="decimal" step="0.01" min="0"/></div>
     <div class="field">
       <label>Descrição</label>
       <input type="text" id="inp-desc" placeholder="Ex: Almoco no restaurante"/>
     </div>
-    <input type="hidden" id="inp-data"/>
     <div class="field">
-      <div class="fixed-toggle-row" id="fixed-toggle-row" onclick="toggleFixedFlag()">
-        <div><div style="font-weight:700;font-size:14px;color:var(--text)">Gasto fixo mensal?</div><div style="font-size:12px;color:var(--text3);margin-top:2px">Repetir automaticamente todo mês</div></div>
-        <div class="fixed-toggle-sw" id="fixed-toggle-sw"></div>
-      </div>
+      <label>Mês de referência</label>
+      <select id="inp-mes-ref"></select>
     </div>
-    <button class="submit-btn" onclick="addExpense()">Salvar gasto</button>
-    <button style="width:100%;padding:12px;border-radius:14px;background:none;border:1.5px solid var(--border);font-size:14px;font-weight:600;color:var(--primary);cursor:pointer;margin-top:8px" onclick="closeModal();abrirModalParcelado()">Parcelado? Toque aqui</button>
+    <div class="field">
+      <label>Vencimento (opcional)</label>
+      <input type="date" id="inp-data"/>
+    </div>
+    <button class="submit-btn" onclick="addExpense()" id="btn-salvar-gasto">Salvar gasto</button>
+    <button id="link-parcelado" style="width:100%;padding:12px;border-radius:14px;background:none;border:1.5px solid var(--border);font-size:14px;font-weight:600;color:var(--primary);cursor:pointer;margin-top:8px" onclick="closeModal();abrirModalParcelado()">É parcelado? Toque aqui</button>
+    <button id="link-recorrente" style="width:100%;padding:12px;border-radius:14px;background:none;border:1.5px solid var(--border);font-size:14px;font-weight:600;color:var(--primary);cursor:pointer;margin-top:8px" onclick="closeModal();abrirModalRecorrente()">É recorrente? Toque aqui</button>
   </div>
 </div>
 
-<!-- MODAL GASTO FIXO -->
-<div class="modal-bg hidden" id="fixed-modal-bg" onclick="closeFixedModalBg(event)">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Gasto Fixo Recorrente</div>
-    <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Lançado automaticamente todo mês na virada.</div>
-    <div class="field"><label>Valor (R$)</label><input type="number" id="fx-valor" class="amt-input" placeholder="0,00" inputmode="decimal" step="0.01" min="0"/></div>
-    <div class="field"><label>Descrição</label><input type="text" id="fx-desc" placeholder="Ex: Aluguel, Academia, Internet"/></div>
-    <div class="field"><label>Mês de início</label><input type="month" id="fx-inicio"/></div>
-    <button class="submit-btn" onclick="saveFixedExpense()">Salvar gasto fixo</button>
-  </div>
-</div>
-
-
-<!-- MODAL PARCELADO -->
-<div class="modal-bg hidden" id="modal-parcelas-bg" onclick="if(event.target===this)document.getElementById('modal-parcelas-bg').classList.add('hidden')">
+<!-- MODAL GASTO PARCELADO -->
+<div class="modal-bg hidden" id="modal-parcelado-bg" onclick="if(event.target===this)closeModalParcelado()">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Gasto Parcelado</div>
-    <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Lançado automaticamente a cada mês até acabar as parcelas.</div>
-    <div class="field"><label>Descrição</label><input type="text" id="parc-desc" placeholder="Ex: Empréstimo Banco, Financiamento"/></div>
-    <div class="field"><label>Número de parcelas</label><input type="number" id="parc-total" placeholder="Ex: 12" inputmode="numeric" min="1" max="360" style="font-size:20px;font-weight:700;text-align:center" oninput="gerarCamposParcelas()"/></div>
-    <div class="field"><label>Mês de início</label><input type="month" id="parc-inicio"/></div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Gera um lançamento por mês automaticamente, todos ligados entre si.</div>
+    <div class="field"><label>Descrição</label><input type="text" id="parc-desc" placeholder="Ex: Empréstimo Super Sim"/></div>
+    <div class="field"><label>Número de parcelas</label><input type="number" id="parc-total" placeholder="Ex: 5" inputmode="numeric" min="1" max="120" oninput="gerarCamposParcelas()"/></div>
+    <div class="field">
+      <label>Mês de referência inicial</label>
+      <select id="parc-mes-ref"></select>
+    </div>
     <div id="parc-valores-container"></div>
     <button class="submit-btn" onclick="salvarParcelado()">Salvar parcelado</button>
+  </div>
+</div>
+
+<!-- MODAL GASTO RECORRENTE -->
+<div class="modal-bg hidden" id="modal-recorrente-bg" onclick="if(event.target===this)closeModalRecorrente()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Gasto Recorrente</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Se repete todo mês automaticamente até você cancelar.</div>
+    <div class="field"><label>Descrição</label><input type="text" id="rec-desc" placeholder="Ex: Netflix, Academia, Aluguel"/></div>
+    <div class="field"><label>Valor (R$)</label><input type="number" id="rec-valor" class="amt-input" placeholder="0,00" inputmode="decimal" step="0.01" min="0"/></div>
+    <div class="field">
+      <label>Mês de início</label>
+      <select id="rec-mes-ini"></select>
+    </div>
+    <button class="submit-btn" onclick="salvarRecorrente()">Salvar recorrente</button>
   </div>
 </div>
 
@@ -640,7 +641,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 <script type="module">
 // ── FIREBASE ────────────────────────────────────────────────
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, onSnapshot, enableNetwork } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // !! SUBSTITUA PELAS SUAS CREDENCIAIS DO FIREBASE !!
 const firebaseConfig = {
@@ -654,7 +655,6 @@ const firebaseConfig = {
 
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
-enableNetwork(db); // força reconexão ao abrir o app (essencial no celular)
 
 // ── CATEGORIES ──────────────────────────────────────────────
 const CATS=[
@@ -688,7 +688,7 @@ async function sha256(str){
 
 // ── STATE ───────────────────────────────────────────────────
 let usuarioLogado=null;
-let S={renda:0,transactions:[],fixedExpenses:[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:'',theme:'light'};
+let S={renda:0,transactions:[],fixedExpenses:[],recorrentes:[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:'',theme:'light'};
 let pizzaChart=null,barChart=null;
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
 let _codigoRecem='';
@@ -707,14 +707,15 @@ function iniciarListener(codigo){
     S.renda=fu.renda||0;
     S.transactions=fu.transactions||[];
     S.fixedExpenses=fu.fixedExpenses||[];
+    S.recorrentes=fu.recorrentes||[];
     S.lastYM=fu.lastYM||'';
     localStorage.setItem('gmCache_'+codigo,JSON.stringify({
       nome:fu.nome,codigo:fu.codigo,senhaHash:fu.senhaHash,
       primeiroAcesso:false,renda:fu.renda||0,
-      transactions:fu.transactions||[],fixedExpenses:fu.fixedExpenses||[],
+      transactions:fu.transactions||[],fixedExpenses:fu.fixedExpenses||[],recorrentes:fu.recorrentes||[],
       lastYM:fu.lastYM||'',theme:fu.theme||S.theme
     }));
-    render();renderFixedList();
+    render();
   },()=>{});
 }
 
@@ -778,7 +779,7 @@ async function criarUsuario(){
     const h=await sha256('12345');
     await setDoc(doc(db,'gastometro_usuarios',codigo),{
       nome,codigo,senhaHash:h,primeiroAcesso:true,
-      renda:0,transactions:[],fixedExpenses:[],lastYM:'',theme:'light',
+      renda:0,transactions:[],fixedExpenses:[],recorrentes:[],lastYM:'',theme:'light',
       criadoEm:new Date().toISOString()
     });
     _codigoRecem=codigo;
@@ -870,7 +871,7 @@ async function fazerLogin(){
       if(h===cached.senhaHash){
         usuarioLogado=cached;
         localStorage.setItem('gmLogado',codigo);
-        S={renda:cached.renda||0,transactions:cached.transactions||[],fixedExpenses:cached.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:cached.lastYM||'',theme:cached.theme||'light'};
+        S={renda:cached.renda||0,transactions:cached.transactions||[],fixedExpenses:cached.fixedExpenses||[],recorrentes:cached.recorrentes||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:cached.lastYM||'',theme:cached.theme||'light'};
         loadEl.classList.add('hidden');
         if(cached.primeiroAcesso){
           document.getElementById('tela-login').classList.add('hidden');
@@ -892,8 +893,8 @@ async function fazerLogin(){
     if(h!==u.senhaHash){erroEl.textContent='Senha incorreta';loadEl.classList.add('hidden');return;}
     usuarioLogado=u;
     localStorage.setItem('gmLogado',u.codigo);
-    S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
-    localStorage.setItem('gmCache_'+u.codigo,JSON.stringify({nome:u.nome,codigo:u.codigo,senhaHash:u.senhaHash,primeiroAcesso:false,renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],lastYM:u.lastYM||'',theme:u.theme||'light'}));
+    S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],recorrentes:u.recorrentes||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
+    localStorage.setItem('gmCache_'+u.codigo,JSON.stringify({nome:u.nome,codigo:u.codigo,senhaHash:u.senhaHash,primeiroAcesso:false,renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],recorrentes:u.recorrentes||[],lastYM:u.lastYM||'',theme:u.theme||'light'}));
     loadEl.classList.add('hidden');
     if(u.primeiroAcesso){
       document.getElementById('tela-login').classList.add('hidden');
@@ -941,7 +942,7 @@ async function salvarTrocaSenhaVol(){
 function confirmarSair(){
   showPopup({icon:'👋',title:'Sair',msg:'Deseja sair do GastôMetro?',btns:[
     {label:'Cancelar',style:'ghost'},
-    {label:'Sair',style:'danger',action:()=>{localStorage.removeItem('gmLogado');usuarioLogado=null;S={renda:0,transactions:[],fixedExpenses:[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:'',theme:'light'};document.getElementById('app').classList.add('hidden');document.getElementById('tela-login').classList.remove('hidden');document.getElementById('login-codigo').value='';document.getElementById('login-senha').value='';}}
+    {label:'Sair',style:'danger',action:()=>{localStorage.removeItem('gmLogado');usuarioLogado=null;S={renda:0,transactions:[],fixedExpenses:[],recorrentes:[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:'',theme:'light'};document.getElementById('app').classList.add('hidden');document.getElementById('tela-login').classList.remove('hidden');document.getElementById('login-codigo').value='';document.getElementById('login-senha').value='';}}
   ]});
 }
 
@@ -956,7 +957,6 @@ function abrirApp(){
   if(S.theme==='dark'){document.documentElement.setAttribute('data-theme','dark');document.getElementById('theme-toggle').classList.add('on');}
   checkMonthRollover();
   render();
-  renderFixedList();
   const jaViu=localStorage.getItem('gmTut_'+usuarioLogado.codigo);
   if(!jaViu)setTimeout(startTutorial,600);
 }
@@ -965,11 +965,11 @@ function abrirApp(){
 async function save(){
   if(!usuarioLogado)return;
   _ultimoSave=Date.now(); // marca o momento do save para o listener não sobrescrever
-  const cache={nome:usuarioLogado.nome,codigo:usuarioLogado.codigo,senhaHash:usuarioLogado.senhaHash,primeiroAcesso:false,renda:S.renda,transactions:S.transactions,fixedExpenses:S.fixedExpenses,lastYM:S.lastYM,theme:S.theme};
+  const cache={nome:usuarioLogado.nome,codigo:usuarioLogado.codigo,senhaHash:usuarioLogado.senhaHash,primeiroAcesso:false,renda:S.renda,transactions:S.transactions,fixedExpenses:S.fixedExpenses,recorrentes:S.recorrentes,lastYM:S.lastYM,theme:S.theme};
   localStorage.setItem('gmCache_'+usuarioLogado.codigo,JSON.stringify(cache));
   try{
     await updateDoc(doc(db,'gastometro_usuarios',usuarioLogado.codigo),{
-      renda:S.renda,transactions:S.transactions,fixedExpenses:S.fixedExpenses,lastYM:S.lastYM,theme:S.theme
+      renda:S.renda,transactions:S.transactions,fixedExpenses:S.fixedExpenses,recorrentes:S.recorrentes,lastYM:S.lastYM,theme:S.theme
     });
   }catch(e){console.warn('Erro ao salvar no Firebase:',e);}
 }
@@ -984,10 +984,10 @@ function checkMonthRollover(){
   if(S.lastYM!==ym){
     S.currentYear=now.getFullYear();
     S.currentMonth=now.getMonth();
-    insertFixedExpenses();
+    estenderRecorrentes();
     S.lastYM=ym;
     save();
-    setTimeout(()=>toast('Novo mês iniciado! Gastos fixos lançados.'),600);
+    setTimeout(()=>toast('Novo mês iniciado!'),600);
   }
 }
 // ── RENDER ───────────────────────────────────────────────────
@@ -1015,7 +1015,7 @@ function render(){
   const catEl=document.getElementById('cat-breakdown');
   if(catEl&&!sortedCats.length){catEl.innerHTML='<div class="empty"><div class="empty-icon">🏷️</div><div class="empty-text">Nenhum gasto este mês</div></div>';}
   
-  renderTxList('all-tx-list',[...txs].sort((a,b)=>b.date.localeCompare(a.date)),true);
+  renderTxList('all-tx-list',[...txs].sort((a,b)=>(b.vencimento||'').localeCompare(a.vencimento||'')||String(b.id).localeCompare(String(a.id))),true);
   if(pizzaChart){pizzaChart.destroy();pizzaChart=null;}
   if(sortedCats.length&&typeof Chart!=='undefined'){
     const colors=['#eb6834','#1baf7a','#2a78d6','#eda100','#e87ba4','#4a3aa7','#e34948','#008300'];
@@ -1035,35 +1035,19 @@ function render(){
 }
 
 function getMonthTx(y,m){
-  const real=S.transactions.filter(t=>{const d=new Date(t.date+'T00:00:00');return d.getFullYear()===y&&d.getMonth()===m;});
-  // Para meses futuros, adicionar gastos fixos como preview (agendados)
-  const now=new Date();
-  const isFuture=(y>now.getFullYear())||(y===now.getFullYear()&&m>=now.getMonth());
-  if(isFuture&&S.fixedExpenses&&S.fixedExpenses.length){
-    const dateStr=y+'-'+String(m+1).padStart(2,'0')+'-01';
-    const idsJaLancados=new Set(real.filter(t=>t.fixed||t.parceladoId).map(t=>t.parceladoId?String(t.parceladoId):t.desc));
-    S.fixedExpenses.forEach(fe=>{
-      const ym=dateStr.substring(0,7);
-      if(fe.inicioYM&&ym<fe.inicioYM)return; // ainda não chegou no mês de início
-      if(fe.skippedMonths&&fe.skippedMonths.includes(ym))return;
-      if(idsJaLancados.has(String(fe.id))||idsJaLancados.has(fe.desc))return;
-      if(fe.parcelado){
-        if((fe.parcelaAtual||0)<fe.totalParcelas){
-          real.push({id:'preview_'+fe.id,desc:`${fe.desc} (${(fe.parcelaAtual||0)+1}/${fe.totalParcelas})`,cat:fe.cat||'outros',val:fe.valores?fe.valores[fe.parcelaAtual||0]:fe.val,date:dateStr,paid:false,preview:true});
-        }
-      } else {
-        real.push({id:'preview_'+fe.id,desc:fe.desc,cat:fe.cat,val:fe.val,date:dateStr,paid:false,preview:true,fixed:true});
-      }
-    });
-  }
-  return real;
+  const targetYM=y+'-'+String(m+1).padStart(2,'0');
+  return S.transactions.filter(t=>{
+    if(t.mesReferencia)return t.mesReferencia===targetYM; // gastos novos: usa mesReferencia direto
+    if(!t.date)return false;
+    const d=new Date(t.date+'T00:00:00');return d.getFullYear()===y&&d.getMonth()===m; // fallback p/ gastos antigos
+  });
 }
 function getTotalMonth(y,m){return getMonthTx(y,m).reduce((a,t)=>a+t.val,0);}
 
 function renderTxList(elId,txs,deletable){
   const el=document.getElementById(elId);
   if(!txs.length){el.innerHTML='<div class="empty"><div class="empty-icon"><img src="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Money%20with%20wings/3D/money_with_wings_3d.png" style="width:56px;height:56px"/></div><div class="empty-text">Nenhum gasto encontrado.<br>Toque no + para adicionar.</div></div>';return;}
-  el.innerHTML=`<div class="tx-list">${txs.map(t=>{const c=getCat(t.cat);const dateStr=new Date(t.date+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});const paidClass=t.paid?'pago':'pendente';const paidLabel=t.paid?'Pago':'Pagar';const strikeStyle=t.paid?'text-decoration:line-through;opacity:.6':'';const isPreview=t.preview===true;if(isPreview){const fid=t.id.replace('preview_','');return`<div class="tx"><div class="tx-info"><div class="tx-desc">${t.desc}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div><button class="tx-paid-btn pendente" onclick="window.pagarPreview('${fid}','${t.date}','${t.desc.replace(/'/g,"\\'")}','${t.val}','${t.cat||'outros'}')">Pagar</button></div><button class="tx-del" onclick="window.deletarPreview('${fid}','${t.date}')">🗑</button></div>`;}return`<div class="tx" style="${t.paid?'opacity:.85':''}"><div class="tx-info"><div class="tx-desc" style="${strikeStyle}">${t.desc}</div><div class="tx-meta">${dateStr}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div><button class="tx-paid-btn ${paidClass}" onclick="window.togglePaid('${t.id}')">${paidLabel}</button></div>${deletable?`<button class="tx-del" onclick="window.deletarGasto('${t.id}')">🗑</button>`:''}</div>`;}).join('')}</div>`;
+  el.innerHTML=`<div class="tx-list">${txs.map(t=>{const c=getCat(t.cat);const venc=t.vencimento||t.date;const dateStr=venc?new Date(venc+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):'';const paidClass=t.paid?'pago':'pendente';const paidLabel=t.paid?'Pago':'Pagar';const strikeStyle=t.paid?'text-decoration:line-through;opacity:.6':'';return`<div class="tx" style="${t.paid?'opacity:.85':''}"><div class="tx-info"><div class="tx-desc" style="${strikeStyle}">${t.desc}</div>${dateStr?`<div class="tx-meta">${dateStr}</div>`:''}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="tx-val">-${fmt(t.val)}</div><button class="tx-paid-btn ${paidClass}" onclick="window.togglePaid('${t.id}')">${paidLabel}</button></div>${deletable?`<button class="tx-edit" onclick="window.editarGasto('${t.id}')">✏️</button><button class="tx-del" onclick="window.deletarGasto('${t.id}')">🗑</button>`:''}</div>`;}).join('')}</div>`;
 }
 
 window.togglePaid=function(id){
@@ -1071,24 +1055,32 @@ window.togglePaid=function(id){
   if(!tx)return;tx.paid=!tx.paid;save();render();
   toast(tx.paid?'Marcado como pago!':'Marcado como pendente');
 };
-window.pagarPreview=function(fid,date,desc,val,cat){
-  // Converte previsão em transação real já marcada como paga
-  S.transactions.push({id:Date.now(),desc,cat,val:parseFloat(val),date,paid:true,parceladoId:fid});
-  // Se for parcelado, avança parcelaAtual
-  const fe=S.fixedExpenses?S.fixedExpenses.find(f=>String(f.id)===String(fid)):null;
-  if(fe&&fe.parcelado){
-    fe.parcelaAtual=(fe.parcelaAtual||0)+1;
-    if(fe.parcelaAtual>=fe.totalParcelas){
-      S.fixedExpenses=S.fixedExpenses.filter(f=>String(f.id)!==String(fid));
-      save();render();
-      toast('Pago! Todas as parcelas concluídas 🎉');
-      return;
-    }
-  }
-  save();render();
-  toast('Marcado como pago!');
-};
 window.deletarGasto=function(id){
+  const tx=S.transactions.find(t=>String(t.id)===String(id));
+  if(tx&&tx.grupoId){
+    // Parte de um gasto parcelado — oferece excluir só esta parcela ou todas do grupo
+    showPopup({icon:'🗑️',title:'Excluir parcelado',msg:'"'+tx.desc+'" faz parte de um gasto parcelado. O que deseja excluir?',btns:[
+      {label:'Cancelar',style:'ghost'},
+      {label:'Só esta parcela',style:'secondary',action:()=>{S.transactions=S.transactions.filter(t=>String(t.id)!==String(id));save();render();toast('Parcela removida');}},
+      {label:'Todas as parcelas',style:'danger',action:()=>{const gid=tx.grupoId;S.transactions=S.transactions.filter(t=>t.grupoId!==gid);save();render();toast('Todas as parcelas removidas');}}
+    ]});
+    return;
+  }
+  if(tx&&tx.recorrenteId){
+    // Parte de um gasto recorrente — oferece excluir só este mês ou cancelar a recorrência daqui pra frente
+    showPopup({icon:'🗑️',title:'Excluir recorrente',msg:'"'+tx.desc+'" é um gasto recorrente. O que deseja fazer?',btns:[
+      {label:'Cancelar',style:'ghost'},
+      {label:'Só este mês',style:'secondary',action:()=>{S.transactions=S.transactions.filter(t=>String(t.id)!==String(id));save();render();toast('Removido só este mês');}},
+      {label:'Cancelar recorrência',style:'danger',action:()=>{
+        const rid=tx.recorrenteId;
+        S.transactions=S.transactions.filter(t=>!(t.recorrenteId===rid&&t.mesReferencia>=tx.mesReferencia));
+        const rec=(S.recorrentes||[]).find(r=>r.id===rid);
+        if(rec)rec.ativo=false;
+        save();render();toast('Recorrência cancelada a partir deste mês');
+      }}
+    ]});
+    return;
+  }
   showPopup({icon:'🗑️',title:'Remover gasto',msg:'Deseja remover este lançamento?',btns:[
     {label:'Cancelar',style:'ghost'},
     {label:'Remover',style:'danger',action:()=>{S.transactions=S.transactions.filter(t=>String(t.id)!==String(id));save();render();toast('Gasto removido');}}
@@ -1096,15 +1088,50 @@ window.deletarGasto=function(id){
 };
 
 // ── ADD EXPENSE ───────────────────────────────────────────────
-let selectedCat='outros',selectedPayment='dinheiro',isFixedExpense=false;
-function openModal(){document.getElementById('modal-bg').classList.remove('hidden');document.getElementById('inp-valor').value='';document.getElementById('inp-desc').value='';const _cs=document.getElementById('cat-suggest');if(_cs)_cs.classList.add('hidden');const _now=new Date();
-  const _minDate=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0')+'-01';
-  const _inpData=document.getElementById('inp-data');
-  _inpData.value=_now.toISOString().split('T')[0]; // data de hoje automática
-  selectedCat='outros';selectedPayment='dinheiro';isFixedExpense=false;document.getElementById('fixed-toggle-row').classList.remove('active');document.querySelectorAll('#pay-toggle .pay-opt').forEach(b=>b.classList.remove('selected'));const _pd=document.getElementById('pay-dinheiro');if(_pd)_pd.classList.add('selected');renderCatGrid();setTimeout(()=>document.getElementById('inp-valor').focus(),100);}
-function toggleFixedFlag(){isFixedExpense=!isFixedExpense;document.getElementById('fixed-toggle-row').classList.toggle('active',isFixedExpense);}
+let selectedCat='outros',selectedPayment='dinheiro',editingId=null;
+// Preenche o <select> de mês de referência com uma janela de meses (padrão: 2 antes até 6 depois do mês atual real)
+// defaultYM: 'YYYY-MM' que deve vir pré-selecionado (se omitido, usa o mês sendo visualizado na tela)
+function popularMesReferencia(selectId,defaultYM){
+  const sel=document.getElementById(selectId);
+  if(!sel)return;
+  const now=new Date();
+  const opts=[];
+  for(let i=-2;i<=6;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()+i,1);
+    const ym=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    opts.push({ym,label:MONTHS[d.getMonth()]+' '+d.getFullYear()});
+  }
+  sel.innerHTML=opts.map(o=>`<option value="${o.ym}">${o.label}</option>`).join('');
+  const fallback=S.currentYear+'-'+String(S.currentMonth+1).padStart(2,'0');
+  sel.value=defaultYM||fallback;
+  if(sel.value!==(defaultYM||fallback))sel.value=fallback; // se defaultYM estiver fora da janela, cai no mês visualizado
+}
+function openModal(){document.getElementById('modal-bg').classList.remove('hidden');document.getElementById('inp-valor').value='';document.getElementById('inp-desc').value='';document.getElementById('inp-data').value='';const _cs=document.getElementById('cat-suggest');if(_cs)_cs.classList.add('hidden');
+  editingId=null;
+  document.getElementById('modal-titulo-gasto').textContent='Novo Gasto';
+  document.getElementById('btn-salvar-gasto').textContent='Salvar gasto';
+  document.getElementById('link-parcelado').style.display='block';
+  document.getElementById('link-recorrente').style.display='block';
+  popularMesReferencia('inp-mes-ref');
+  selectedCat='outros';selectedPayment='dinheiro';document.querySelectorAll('#pay-toggle .pay-opt').forEach(b=>b.classList.remove('selected'));const _pd=document.getElementById('pay-dinheiro');if(_pd)_pd.classList.add('selected');renderCatGrid();setTimeout(()=>document.getElementById('inp-valor').focus(),100);}
+window.editarGasto=function(id){
+  const tx=S.transactions.find(t=>String(t.id)===String(id));
+  if(!tx)return;
+  editingId=id;
+  document.getElementById('modal-titulo-gasto').textContent='Editar Gasto';
+  document.getElementById('btn-salvar-gasto').textContent='Salvar alterações';
+  document.getElementById('link-parcelado').style.display='none'; // não faz sentido converter em parcelado ao editar
+  document.getElementById('link-recorrente').style.display='none';
+  document.getElementById('inp-valor').value=tx.val;
+  document.getElementById('inp-desc').value=tx.desc;
+  document.getElementById('inp-data').value=tx.vencimento||'';
+  selectedCat=tx.cat||'outros';selectedPayment=tx.pay||'dinheiro';
+  popularMesReferencia('inp-mes-ref',tx.mesReferencia);
+  document.getElementById('modal-bg').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('inp-valor').focus(),100);
+};
 function closeModalBg(e){if(e.target===document.getElementById('modal-bg'))closeModal();}
-function closeModal(){document.getElementById('modal-bg').classList.add('hidden');}
+function closeModal(){document.getElementById('modal-bg').classList.add('hidden');editingId=null;}
 function renderCatGrid(){}
 window.selectCat=function(id){selectedCat=id;renderCatGrid();};
 function detectCategory(){}
@@ -1116,19 +1143,114 @@ function selectPayment(type,el){
 function addExpense(){
   const val=parseFloat(document.getElementById('inp-valor').value);
   const desc=document.getElementById('inp-desc').value.trim();
-  const date=document.getElementById('inp-data').value;
+  const mesReferencia=document.getElementById('inp-mes-ref').value; // 'YYYY-MM' — decide o mês do gasto
+  const vencimento=document.getElementById('inp-data').value||null; // opcional, só informativo
   if(!val||val<=0){toast('Digite um valor válido');return;}
   if(!desc){toast('Digite uma descrição');return;}
-  // Bloquear meses anteriores ao atual
+  if(!mesReferencia){toast('Selecione o mês de referência');return;}
+  if(editingId){
+    const tx=S.transactions.find(t=>String(t.id)===String(editingId));
+    if(tx){tx.val=val;tx.desc=desc;tx.mesReferencia=mesReferencia;tx.vencimento=vencimento;tx.cat=selectedCat;tx.pay=selectedPayment;}
+    editingId=null;
+    closeModal();save();render();
+    toast('Gasto atualizado!');
+    return;
+  }
+  S.transactions.push({id:Date.now(),desc,cat:selectedCat,val,mesReferencia,vencimento,pay:selectedPayment,paid:false});
+  closeModal();save();render();
+  toast('Gasto adicionado!');
+}
+
+// ── GASTO PARCELADO ─────────────────────────────────────────────
+function addMonthsToYM(ym,n){const[y,m]=ym.split('-').map(Number);const d=new Date(y,m-1+n,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function abrirModalParcelado(){
+  document.getElementById('parc-desc').value='';
+  document.getElementById('parc-total').value='';
+  document.getElementById('parc-valores-container').innerHTML='';
   const now=new Date();
-  const mesAtual=new Date(now.getFullYear(),now.getMonth(),1);
-  const dataGasto=new Date(date+'T00:00:00');
-  const mesGasto=new Date(dataGasto.getFullYear(),dataGasto.getMonth(),1);
-  if(mesGasto<mesAtual){toast('Não é possível cadastrar gastos em meses anteriores!');return;}
-  S.transactions.push({id:Date.now(),desc,cat:selectedCat,val,date,pay:selectedPayment,paid:false,fixed:isFixedExpense});
-  if(isFixedExpense){if(!S.fixedExpenses)S.fixedExpenses=[];S.fixedExpenses.push({id:Date.now()+1,desc,cat:selectedCat,val,pay:selectedPayment});}
-  closeModal();save();render();renderFixedList();
-  toast(isFixedExpense?'Gasto fixo salvo! Vai se repetir todo mês.':'Gasto adicionado!');
+  const nowYM=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const nextYM=addMonthsToYM(nowYM,1); // pré-seleciona o mês seguinte ("trabalha agora pra pagar depois")
+  popularMesReferencia('parc-mes-ref',nextYM);
+  document.getElementById('modal-parcelado-bg').classList.remove('hidden');
+}
+function closeModalParcelado(){document.getElementById('modal-parcelado-bg').classList.add('hidden');}
+function gerarCamposParcelas(){
+  const total=parseInt(document.getElementById('parc-total').value)||0;
+  const container=document.getElementById('parc-valores-container');
+  if(total<1||total>120){container.innerHTML='';return;}
+  let html='<div style="display:flex;align-items:center;gap:8px;margin:8px 0"><input type="number" id="parc-val-todos" placeholder="Mesmo valor p/ todas (opcional)" inputmode="decimal" step="0.01" style="flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;outline:none"/><button type="button" onclick="preencherTodos()" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Aplicar a todas</button></div>';
+  for(let i=1;i<=total;i++){
+    html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="font-size:12px;color:var(--text3);width:64px;flex-shrink:0">Parcela ${i}</div><input type="number" id="parc-val-${i}" placeholder="0,00" inputmode="decimal" step="0.01" style="flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;outline:none"/></div>`;
+  }
+  container.innerHTML=html;
+}
+function preencherTodos(){
+  const val=document.getElementById('parc-val-todos').value;
+  const total=parseInt(document.getElementById('parc-total').value)||0;
+  for(let i=1;i<=total;i++){
+    const inp=document.getElementById('parc-val-'+i);
+    if(inp)inp.value=val;
+  }
+}
+function salvarParcelado(){
+  const desc=document.getElementById('parc-desc').value.trim();
+  const total=parseInt(document.getElementById('parc-total').value);
+  const mesInicial=document.getElementById('parc-mes-ref').value;
+  if(!desc){toast('Digite uma descrição');return;}
+  if(!total||total<1){toast('Informe o número de parcelas');return;}
+  if(!mesInicial){toast('Selecione o mês de referência inicial');return;}
+  const valores=[];
+  for(let i=1;i<=total;i++){
+    const v=parseFloat(document.getElementById('parc-val-'+i)?.value||'0');
+    if(!v||v<=0){toast(`Informe o valor da parcela ${i}`);return;}
+    valores.push(v);
+  }
+  const grupoId='grp_'+Date.now();
+  for(let i=0;i<total;i++){
+    const mesReferencia=addMonthsToYM(mesInicial,i);
+    S.transactions.push({id:Date.now()+i,desc:`${desc} (${i+1}/${total})`,cat:'outros',val:valores[i],mesReferencia,vencimento:null,pay:'dinheiro',paid:false,grupoId,parcelaAtual:i+1,totalParcelas:total});
+  }
+  closeModalParcelado();save();render();
+  toast(`Parcelado salvo! ${total} parcelas lançadas, a partir de ${mesInicial}.`);
+}
+
+// ── GASTO RECORRENTE ────────────────────────────────────────────
+const REC_HORIZONTE=12; // quantos meses à frente já deixamos gerados de uma vez
+function abrirModalRecorrente(){
+  document.getElementById('rec-desc').value='';
+  document.getElementById('rec-valor').value='';
+  const defaultYM=S.currentYear+'-'+String(S.currentMonth+1).padStart(2,'0'); // mês que o usuário está vendo
+  popularMesReferencia('rec-mes-ini',defaultYM);
+  document.getElementById('modal-recorrente-bg').classList.remove('hidden');
+}
+function closeModalRecorrente(){document.getElementById('modal-recorrente-bg').classList.add('hidden');}
+function salvarRecorrente(){
+  const desc=document.getElementById('rec-desc').value.trim();
+  const val=parseFloat(document.getElementById('rec-valor').value);
+  const mesIni=document.getElementById('rec-mes-ini').value;
+  if(!desc){toast('Digite uma descrição');return;}
+  if(!val||val<=0){toast('Digite um valor válido');return;}
+  if(!mesIni){toast('Selecione o mês de início');return;}
+  const recorrenteId='rec_'+Date.now();
+  const ultimoMes=addMonthsToYM(mesIni,REC_HORIZONTE-1);
+  if(!S.recorrentes)S.recorrentes=[];
+  S.recorrentes.push({id:recorrenteId,desc,val,cat:'outros',pay:'dinheiro',ativo:true,ultimoMesGerado:ultimoMes});
+  for(let i=0;i<REC_HORIZONTE;i++){
+    const mesReferencia=addMonthsToYM(mesIni,i);
+    S.transactions.push({id:uid(),desc,cat:'outros',val,mesReferencia,vencimento:null,pay:'dinheiro',paid:false,recorrenteId});
+  }
+  closeModalRecorrente();save();render();
+  toast(`Recorrente salvo! Já lançado até ${ultimoMes}.`);
+}
+// Estende os recorrentes ativos +1 mês além do horizonte já gerado — chamado na virada de mês real
+function estenderRecorrentes(){
+  if(!S.recorrentes||!S.recorrentes.length)return;
+  S.recorrentes.forEach(rec=>{
+    if(!rec.ativo)return;
+    const proximoMes=addMonthsToYM(rec.ultimoMesGerado,1);
+    S.transactions.push({id:uid(),desc:rec.desc,cat:rec.cat||'outros',val:rec.val,mesReferencia:proximoMes,vencimento:null,pay:rec.pay||'dinheiro',paid:false,recorrenteId:rec.id});
+    rec.ultimoMesGerado=proximoMes;
+  });
 }
 
 // ── OTHER ACTIONS ─────────────────────────────────────────────
@@ -1138,53 +1260,7 @@ function toggleTheme(){const isDark=document.documentElement.getAttribute('data-
 function editRenda(){document.getElementById('inp-renda').value=S.renda||'';document.getElementById('modal-renda').classList.remove('hidden');setTimeout(()=>document.getElementById('inp-renda').focus(),100);}
 function closeModalRenda(){document.getElementById('modal-renda').classList.add('hidden');}
 function salvarRenda(){const n=parseFloat(document.getElementById('inp-renda').value);if(!isNaN(n)&&n>=0){S.renda=n;closeModalRenda();save();render();toast('Renda atualizada!');}}
-function confirmarLimpar(){showPopup({icon:'⚠️',title:'Limpar dados',msg:'Apagar todos os gastos deste mes?',btns:[{label:'Cancelar',style:'ghost'},{label:'Limpar',style:'danger',action:()=>{const y=S.currentYear,m=S.currentMonth;S.transactions=S.transactions.filter(t=>{const d=new Date(t.date+'T00:00:00');return!(d.getFullYear()===y&&d.getMonth()===m);});save();render();toast('Dados do mes limpos');}}]});}
-
-// ── GASTOS FIXOS ──────────────────────────────────────────────
-let fxSelectedCat='contas',fxSelectedPayment='dinheiro';
-function renderFixedList(){const el=document.getElementById('fixed-list');if(!el)return;if(!S.fixedExpenses||!S.fixedExpenses.length){el.innerHTML='<div class="empty-fixed">Nenhum gasto fixo cadastrado</div>';return;}const payLabelsF={credito:'Crédito',debito:'Débito',pix:'Pix',dinheiro:'Dinheiro'};el.innerHTML=S.fixedExpenses.map(fe=>{const payLbl=payLabelsF[fe.pay]||'';return`<div class="fixed-item"><div class="fixed-item-info"><div class="fixed-item-desc">${fe.desc}</div>${payLbl?`<div class="fixed-item-meta">${payLbl}</div>`:''}</div><div class="fixed-item-val">${fmt(fe.val)}</div><button class="fixed-item-del" onclick="window.deleteFixed('${fe.id}')">x</button></div>`;}).join('');}
-function openFixedModal(){fxSelectedCat='contas';fxSelectedPayment='dinheiro';document.getElementById('fx-valor').value='';document.getElementById('fx-desc').value='';document.getElementById('fx-inicio').value=S.currentYear+'-'+String(S.currentMonth+1).padStart(2,'0');renderFxCatGrid();document.getElementById('fixed-modal-bg').classList.remove('hidden');}
-function closeFixedModalBg(e){if(e.target===document.getElementById('fixed-modal-bg'))closeFixedModal();}
-function closeFixedModal(){document.getElementById('fixed-modal-bg').classList.add('hidden');}
-function renderFxCatGrid(){}
-window.fxSelectCat=function(id){fxSelectedCat=id;renderFxCatGrid();};
-function selectFixedPayment(v){fxSelectedPayment=v;}
-function saveFixedExpense(){
-  const val=parseFloat(document.getElementById('fx-valor').value);
-  const desc=document.getElementById('fx-desc').value.trim();
-  const inicio=document.getElementById('fx-inicio').value;
-  if(!val||val<=0){toast('Informe o valor');return;}
-  if(!desc){toast('Informe a descricao');return;}
-  if(!inicio){toast('Informe o mês de início');return;}
-  if(!S.fixedExpenses)S.fixedExpenses=[];
-  const feId=Date.now()+'';
-  S.fixedExpenses.push({id:feId,desc,cat:fxSelectedCat,val,pay:fxSelectedPayment,inicioYM:inicio});
-  // Criar transação real para o mês de início (se já chegou ou é o mês atual)
-  const now=new Date();
-  const nowYM=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  if(inicio<=nowYM){
-    const dateStr=inicio+'-01';
-    S.transactions.push({id:uid(),desc,cat:fxSelectedCat,val,date:dateStr,paid:false,fixed:true});
-  }
-  save();closeFixedModal();renderFixedList();render();
-  toast('Gasto fixo salvo! Será lançado todo mês.');
-}
-window.deleteFixed=function(id){showPopup({icon:'🗑️',title:'Remover gasto fixo',msg:'Deseja remover este gasto fixo?',btns:[{label:'Cancelar',style:'ghost'},{label:'Remover',style:'danger',action:()=>{S.fixedExpenses=S.fixedExpenses.filter(f=>f.id!==id);save();renderFixedList();toast('Gasto fixo removido');}}]});};
-
-window.deletarPreview=function(fid,dateStr){
-  const ym=dateStr.substring(0,7); // ex: '2026-09'
-  showPopup({icon:'🗑️',title:'Excluir gasto fixo',msg:'Excluir "'+((S.fixedExpenses.find(f=>String(f.id)===String(fid))||{}).desc||'este gasto')+'"?',btns:[
-    {label:'Cancelar',style:'ghost'},
-    {label:'Só '+new Date(ym+'-02').toLocaleDateString('pt-BR',{month:'long'}),style:'secondary',action:()=>{
-      const fe=S.fixedExpenses.find(f=>String(f.id)===String(fid));
-      if(fe){if(!fe.skippedMonths)fe.skippedMonths=[];fe.skippedMonths.push(ym);save();render();renderFixedList();toast('Removido só para este mês');}
-    }},
-    {label:'Todos os meses',style:'danger',action:()=>{
-      S.fixedExpenses=S.fixedExpenses.filter(f=>String(f.id)!==String(fid));
-      save();render();renderFixedList();toast('Gasto fixo removido de todos os meses');
-    }}
-  ]});
-};
+function confirmarLimpar(){showPopup({icon:'⚠️',title:'Limpar dados',msg:'Apagar todos os gastos deste mes?',btns:[{label:'Cancelar',style:'ghost'},{label:'Limpar',style:'danger',action:()=>{const y=S.currentYear,m=S.currentMonth;const targetYM=y+'-'+String(m+1).padStart(2,'0');S.transactions=S.transactions.filter(t=>{if(t.mesReferencia)return t.mesReferencia!==targetYM;if(!t.date)return true;const d=new Date(t.date+'T00:00:00');return!(d.getFullYear()===y&&d.getMonth()===m);});save();render();toast('Dados do mes limpos');}}]});}
 
 // ── TUTORIAL ──────────────────────────────────────────────────
 const TUT_STEPS=[
@@ -1192,7 +1268,7 @@ const TUT_STEPS=[
   {icon:'➕',title:'Adicionar um gasto',desc:'Toque no botão + para lançar um gasto. Digite a descricao e o app detecta a categoria automaticamente!'},
   {icon:'✓',title:'Marcar como pago',desc:'Toque em "Pagar" em qualquer gasto para marcar como pago. Assim você acompanha o que ainda está pendente.'},
   {icon:'📊',title:'Aba Resumo',desc:'Veja quanto gastou, quanto sobra da sua renda e um grafico por categoria. Atualize sua renda nas Configuracoes.'},
-  {icon:'🔁',title:'Gastos Fixos',desc:'Marque o toggle "Gasto fixo" ao cadastrar. Ele se repete todo mês automaticamente!'},
+  {icon:'🔁',title:'Mês de referência',desc:'Ao cadastrar um gasto, escolha o mês de referência — é ele que decide em qual mês o gasto entra, não a data de vencimento.'},
   {icon:'📅',title:'Histórico Mensal',desc:'Na aba Histórico você vê os gastos dos últimos 6 meses e compara a evolução mês a mês.'},
 ];
 let tutStep=0;
@@ -1223,9 +1299,16 @@ window.openModal=openModal;
 window.closeModal=closeModal;
 window.closeModalBg=closeModalBg;
 window.addExpense=addExpense;
+window.abrirModalParcelado=abrirModalParcelado;
+window.closeModalParcelado=closeModalParcelado;
+window.salvarParcelado=salvarParcelado;
+window.gerarCamposParcelas=gerarCamposParcelas;
+window.preencherTodos=preencherTodos;
+window.abrirModalRecorrente=abrirModalRecorrente;
+window.closeModalRecorrente=closeModalRecorrente;
+window.salvarRecorrente=salvarRecorrente;
 window.detectCategory=detectCategory;
 window.selectPayment=selectPayment;
-window.toggleFixedFlag=toggleFixedFlag;
 window.changeMonth=changeMonth;
 window.switchPanel=switchPanel;
 window.toggleTheme=toggleTheme;
@@ -1233,108 +1316,11 @@ window.editRenda=editRenda;
 window.closeModalRenda=closeModalRenda;
 window.salvarRenda=salvarRenda;
 window.confirmarLimpar=confirmarLimpar;
-window.openFixedModal=openFixedModal;
-window.closeFixedModal=closeFixedModal;
-window.closeFixedModalBg=closeFixedModalBg;
-window.saveFixedExpense=saveFixedExpense;
-window.selectFixedPayment=selectFixedPayment;
 window.startTutorial=startTutorial;
 window.tutNext=tutNext;
 window.skipTutorial=skipTutorial;
 window.sairAdmin=sairAdmin;
 
-
-// ── PARCELADO ──────────────────────────────────────────────
-let parcSelectedCat='contas';
-function abrirModalParcelado(){
-  document.getElementById('parc-desc').value='';
-  document.getElementById('parc-total').value='';
-  document.getElementById('parc-valores-container').innerHTML='';
-  // Usa o mês que o usuário está visualizando, não o mês atual
-  document.getElementById('parc-inicio').value=S.currentYear+'-'+String(S.currentMonth+1).padStart(2,'0');
-  document.getElementById('modal-parcelas-bg').classList.remove('hidden');
-}
-function gerarCamposParcelas(){
-  const total=parseInt(document.getElementById('parc-total').value)||0;
-  const container=document.getElementById('parc-valores-container');
-  if(total<1||total>120){container.innerHTML='';return;}
-  let html='<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Valor de cada parcela (R$)</div>';
-  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><input type="number" id="parc-val-todos" placeholder="Mesmo valor para todas" inputmode="decimal" step="0.01" style="flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;outline:none"/><button onclick="preencherTodos()" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Aplicar a todas</button></div>';
-  for(let i=1;i<=total;i++){
-    html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="font-size:12px;color:var(--text3);width:60px;flex-shrink:0">Parcela ${i}</div><input type="number" id="parc-val-${i}" placeholder="0,00" inputmode="decimal" step="0.01" style="flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;outline:none"/></div>`;
-  }
-  container.innerHTML=html;
-}
-function preencherTodos(){
-  const val=document.getElementById('parc-val-todos').value;
-  const total=parseInt(document.getElementById('parc-total').value)||0;
-  for(let i=1;i<=total;i++){
-    const inp=document.getElementById('parc-val-'+i);
-    if(inp)inp.value=val;
-  }
-}
-function salvarParcelado(){
-  const desc=document.getElementById('parc-desc').value.trim();
-  const total=parseInt(document.getElementById('parc-total').value);
-  const inicio=document.getElementById('parc-inicio').value;
-  if(!desc){toast('Informe a descrição');return;}
-  if(!total||total<1){toast('Informe o número de parcelas');return;}
-  if(!inicio){toast('Informe o mês inicial');return;}
-  // Coletar valores
-  const valores=[];
-  for(let i=1;i<=total;i++){
-    const v=parseFloat(document.getElementById('parc-val-'+i)?.value||'0');
-    if(!v||v<=0){toast(`Informe o valor da parcela ${i}`);return;}
-    valores.push(v);
-  }
-  if(!S.fixedExpenses)S.fixedExpenses=[];
-  const id='parc_'+Date.now();
-  S.fixedExpenses.push({id,desc,cat:'outros',valores,parcelado:true,totalParcelas:total,parcelaAtual:0,inicioYM:inicio});
-  // Lançar parcelas já devidas
-  const [anoInicio,mesInicio]=inicio.split('-').map(Number);
-  const now=new Date();
-  let parcelaAtual=0;
-  for(let i=0;i<total;i++){
-    const d=new Date(anoInicio,mesInicio-1+i,1);
-    if(d<=now){
-      parcelaAtual++;
-      const dateStr=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';
-      S.transactions.push({id:uid(),desc:`${desc} (${parcelaAtual}/${total})`,cat:'outros',val:valores[i],date:dateStr,paid:false,parceladoId:id});
-    }
-  }
-  S.fixedExpenses[S.fixedExpenses.length-1].parcelaAtual=parcelaAtual;
-  document.getElementById('modal-parcelas-bg').classList.add('hidden');
-  save();render();
-  toast(`Parcelado salvo! ${parcelaAtual} de ${total} parcelas lançadas.`);
-}
-// Ao inserir gastos fixos na virada, incluir parcelados
-function insertFixedExpenses(){
-  if(!S.fixedExpenses||!S.fixedExpenses.length)return;
-  const y=S.currentYear,m=S.currentMonth;
-  const dateStr=y+'-'+String(m+1).padStart(2,'0')+'-01';
-  const toRemove=[];
-  const ym=dateStr.substring(0,7);
-  S.fixedExpenses.forEach(fe=>{
-    if(fe.inicioYM&&ym<fe.inicioYM)return; // ainda não chegou no mês de início
-    if(fe.parcelado){
-      if(fe.parcelaAtual>=fe.totalParcelas){toRemove.push(fe.id);return;}
-      const val=fe.valores?fe.valores[fe.parcelaAtual]:fe.val;
-      fe.parcelaAtual++;
-      S.transactions.push({id:uid(),desc:`${fe.desc} (${fe.parcelaAtual}/${fe.totalParcelas})`,cat:fe.cat||'outros',val,date:dateStr,paid:false,parceladoId:fe.id});
-      if(fe.parcelaAtual>=fe.totalParcelas){
-        toRemove.push(fe.id);
-        toast(`${fe.desc} — todas as ${fe.totalParcelas} parcelas concluídas!`);
-      }
-    } else {
-      S.transactions.push({id:uid(),desc:fe.desc,cat:fe.cat,val:fe.val,date:dateStr,paid:false,fixed:true});
-    }
-  });
-  if(toRemove.length)S.fixedExpenses=S.fixedExpenses.filter(f=>!toRemove.includes(f.id));
-}
-window.abrirModalParcelado=abrirModalParcelado;
-window.salvarParcelado=salvarParcelado;
-window.gerarCamposParcelas=gerarCamposParcelas;
-window.preencherTodos=preencherTodos;
 
 // ── BOOT ─────────────────────────────────────────────────────
 async function init(){
@@ -1343,7 +1329,7 @@ async function init(){
     new Promise(res=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';s.onload=res;s.onerror=res;document.head.appendChild(s);}),
     new Promise(res=>setTimeout(res,2000))
   ]);
-  if(isAdmin){document.getElementById('splash').classList.add('hidden');initAdmin();return;}
+  if(isAdmin){document.getElementById('splash').classList.add('hidden');window.appPronto=true;initAdmin();return;}
 
   // ── AUTO-LOGIN: try-catch APENAS na leitura dos dados, nunca no render ──
   let usuarioDados=null;
@@ -1355,15 +1341,17 @@ async function init(){
       if(cacheStr){
         usuarioDados=JSON.parse(cacheStr);
       } else {
-        // Sem cache local, buscar do Firebase
-        const snap=await getDoc(doc(db,'gastometro_usuarios',codigoSalvo));
+        // Sem cache local, buscar do Firebase — com timeout de 6s pra nunca travar o splash pra sempre
+        const timeoutFirebase=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),6000));
+        const snap=await Promise.race([getDoc(doc(db,'gastometro_usuarios',codigoSalvo)),timeoutFirebase]);
         if(snap.exists()) usuarioDados=snap.data();
       }
     }
-  }catch(e){console.warn('Erro ao ler dados de login:',e);}
+  }catch(e){console.warn('Erro ao ler dados de login (login continua salvo, só não entrou automático):',e);}
 
   // Esconde splash sempre
   document.getElementById('splash').classList.add('hidden');
+  window.appPronto=true; // a partir daqui é seguro o service worker recarregar a página se precisar
 
   if(usuarioDados){
     // Login bem-sucedido — render fica FORA do try-catch
@@ -1374,6 +1362,7 @@ async function init(){
     return;
   }
   document.getElementById('tela-login').classList.remove('hidden');
+  if(codigoSalvo){document.getElementById('login-codigo').value=codigoSalvo;setTimeout(()=>document.getElementById('login-senha').focus(),100);}
 }
 init();
 
