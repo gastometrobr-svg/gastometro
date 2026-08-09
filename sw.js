@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gastometro-v6';
+const CACHE_NAME = 'gastometro-v7';
 const urlsToCache = [
   '/gastometro/manifest.json'
   // index.html NÃO entra no cache — sempre busca do servidor
@@ -25,6 +25,16 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
+
+  // Só cuida de requisições GET e do próprio site. Nunca intercepta requisições
+  // de outros domínios (Firebase Storage, Firestore, gstatic, etc) nem métodos
+  // que não sejam GET (POST/PUT são usados por upload de arquivo, por exemplo) —
+  // interceptar isso quebra o protocolo de upload do Firebase Storage sem dar erro,
+  // só travando silenciosamente.
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin) {
+    return; // deixa o navegador lidar direto, sem passar pelo service worker
+  }
+
   // index.html: sempre busca do servidor (nunca cache)
   if (url.pathname.endsWith('/') || url.pathname.endsWith('index.html')) {
     event.respondWith(
@@ -32,7 +42,7 @@ self.addEventListener('fetch', event => {
     );
     return;
   }
-  // Outros recursos: rede primeiro, cache como fallback
+  // Outros recursos do próprio site: rede primeiro, cache como fallback
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request))
   );
