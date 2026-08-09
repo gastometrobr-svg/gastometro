@@ -553,10 +553,10 @@ body{font-family:var(--f-body);background:var(--bg);color:var(--text);min-height
 <button class="fab" onclick="openModal()" id="fab" style="display:none">+</button>
 
 <div class="bottom-nav">
-  <button class="bnav-btn active" onclick="switchPanel('resumo',0)"><span class="ico">📊</span>Resumo</button>
-  <button class="bnav-btn" onclick="switchPanel('lancamentos',1)"><span class="ico">📝</span>Gastos</button>
-  <button class="bnav-btn" onclick="switchPanel('historico',2)"><span class="ico">📅</span>Histórico</button>
-  <button class="bnav-btn" onclick="switchPanel('config',3)"><span class="ico">⚙️</span>Config</button>
+  <button class="bnav-btn active" onclick="switchPanel('resumo',0)"><span class="ico" id="nav-ico-resumo"></span>Resumo</button>
+  <button class="bnav-btn" onclick="switchPanel('lancamentos',1)"><span class="ico" id="nav-ico-gastos"></span>Gastos</button>
+  <button class="bnav-btn" onclick="switchPanel('historico',2)"><span class="ico" id="nav-ico-historico"></span>Histórico</button>
+  <button class="bnav-btn" onclick="switchPanel('config',3)"><span class="ico" id="nav-ico-config"></span>Config</button>
 </div>
 
 <!-- MODAL ADICIONAR GASTO -->
@@ -740,6 +740,19 @@ function catIconSvg(id,size){
 // Ícones de ação (editar/excluir) no mesmo estilo de linha fina — em vez de emoji de sistema
 function iconLapis(size){return `<svg viewBox="0 0 20 20" width="${size||16}" height="${size||16}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 3.5l3 3L6 17H3v-3z"/></svg>`;}
 function iconLixeira(size){return `<svg viewBox="0 0 20 20" width="${size||16}" height="${size||16}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5h14"/><path d="M7.5 5.5V4a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1.5"/><path d="M5.5 5.5l.7 10a1.5 1.5 0 0 0 1.5 1.4h4.6a1.5 1.5 0 0 0 1.5-1.4l.7-10"/><path d="M8.3 9v5M11.7 9v5"/></svg>`;}
+// Ícones da barra de navegação inferior (em vez de emoji, que varia entre sistemas —
+// o calendário em especial vem com uma data FIXA desenhada no emoji de alguns sistemas,
+// então aqui ele mostra o dia real de hoje, atualizado dinamicamente)
+function iconNavResumo(){return `<svg viewBox="0 0 20 20" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="3" height="7" rx="1"/><rect x="8.5" y="6" width="3" height="11" rx="1"/><rect x="14" y="3" width="3" height="14" rx="1"/></svg>`;}
+function iconNavGastos(){return `<svg viewBox="0 0 20 20" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="1.8"/><path d="M6.3 7.5h7.4M6.3 10.3h7.4M6.3 13h4.6"/></svg>`;}
+function iconNavHistorico(){const dia=new Date().getDate();return `<svg viewBox="0 0 20 20" width="22" height="22"><rect x="3" y="4.5" width="14" height="12.5" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 8.3h14" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 2.3v3M13 2.3v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><text x="10" y="14.3" font-size="7" font-weight="700" text-anchor="middle" fill="currentColor" font-family="system-ui,sans-serif">${dia}</text></svg>`;}
+function iconNavConfig(){return `<svg viewBox="0 0 20 20" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.6"/><path d="M10 3.2v2.1M10 14.7v2.1M3.2 10h2.1M14.7 10h2.1M5.6 5.6l1.5 1.5M12.9 12.9l1.5 1.5M5.6 14.4l1.5-1.5M12.9 7.1l1.5-1.5"/></svg>`;}
+function popularIconesNav(){
+  const r=document.getElementById('nav-ico-resumo');if(r)r.innerHTML=iconNavResumo();
+  const g=document.getElementById('nav-ico-gastos');if(g)g.innerHTML=iconNavGastos();
+  const h=document.getElementById('nav-ico-historico');if(h)h.innerHTML=iconNavHistorico();
+  const c=document.getElementById('nav-ico-config');if(c)c.innerHTML=iconNavConfig();
+}
 
 const MONTHS=['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const MONTHS_SHORT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -1094,6 +1107,7 @@ function abrirApp(){
   document.getElementById('config-codigo-usuario').textContent=usuarioLogado.codigo;
   renderAvatar();
   carregarFotoUsuario(usuarioLogado.codigo);
+  popularIconesNav();
   if(S.theme==='dark'){document.documentElement.setAttribute('data-theme','dark');document.getElementById('theme-toggle').classList.add('on');}
   checkMonthRollover();
   garantirRecorrentesAte(S.currentYear,S.currentMonth);
