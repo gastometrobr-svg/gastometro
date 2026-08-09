@@ -413,7 +413,6 @@ body{font-family:var(--f-body);background:var(--bg);color:var(--text);min-height
         </div>
         <input type="file" id="inp-foto" accept="image/*" style="display:none" onchange="onFotoSelecionada(event)"/>
         <div class="hdr-user" id="hdr-user-nome" onclick="confirmarSair()">Sair</div>
-        <button class="hdr-btn" onclick="toggleTheme()">🌙</button>
       </div>
     </div>
     <div class="hdr-summary">
@@ -492,7 +491,6 @@ body{font-family:var(--f-body);background:var(--bg);color:var(--text);min-height
       <div class="card">
         <div class="card-title">Preferencias</div>
         <div class="set-row"><div class="set-label">Renda Mensal</div><button class="btn-ghost" onclick="editRenda()" id="renda-btn">R$ 0,00</button></div>
-        <div class="set-row"><div class="set-label">Tema Escuro</div><button class="toggle" id="theme-toggle" onclick="toggleTheme()"></button></div>
         <div class="set-row"><div class="set-label">Ver tutorial novamente</div><button onclick="startTutorial()" style="background:none;border:none;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">Ver</button></div>
       <div style="text-align:center;padding:16px 0 4px;font-size:11px;color:var(--text3)">GastôMetro v1.0.0</div>
       </div>
@@ -1108,7 +1106,8 @@ function abrirApp(){
   renderAvatar();
   carregarFotoUsuario(usuarioLogado.codigo);
   popularIconesNav();
-  if(S.theme==='dark'){document.documentElement.setAttribute('data-theme','dark');document.getElementById('theme-toggle').classList.add('on');}
+  document.documentElement.setAttribute('data-theme','light'); // modo escuro removido — app sempre no claro
+  S.theme='light';
   checkMonthRollover();
   garantirRecorrentesAte(S.currentYear,S.currentMonth);
   migrarCategoriasLegado();
@@ -1561,7 +1560,6 @@ function garantirRecorrentesAte(y,m){
 // ── OTHER ACTIONS ─────────────────────────────────────────────
 function changeMonth(dir){let m=S.currentMonth+dir,y=S.currentYear;if(m<0){m=11;y--;}if(m>11){m=0;y++;}S.currentMonth=m;S.currentYear=y;garantirRecorrentesAte(y,m);render();}
 function switchPanel(name,idx){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.getElementById('panel-'+name).classList.add('active');document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.bnav-btn')[idx].classList.add('active');document.querySelectorAll('.tabs .tab').forEach((t,i)=>t.classList.toggle('active',i===idx));document.getElementById('fab').style.display=name==='lancamentos'?'flex':'none';}
-function toggleTheme(){const isDark=document.documentElement.getAttribute('data-theme')==='dark';const next=isDark?'light':'dark';document.documentElement.setAttribute('data-theme',next);document.getElementById('theme-toggle').classList.toggle('on',next==='dark');S.theme=next;save();if(pizzaChart){pizzaChart.destroy();pizzaChart=null;}if(barChart){barChart.destroy();barChart=null;}render();}
 function editRenda(){document.getElementById('inp-renda').value=S.renda||'';document.getElementById('modal-renda').classList.remove('hidden');setTimeout(()=>document.getElementById('inp-renda').focus(),100);}
 function closeModalRenda(){document.getElementById('modal-renda').classList.add('hidden');}
 function salvarRenda(){const n=parseFloat(document.getElementById('inp-renda').value);if(!isNaN(n)&&n>=0){S.renda=n;closeModalRenda();save();render();toast('Renda atualizada!');}}
@@ -1619,7 +1617,6 @@ window.detectCategory=detectCategory;
 window.selectPayment=selectPayment;
 window.changeMonth=changeMonth;
 window.switchPanel=switchPanel;
-window.toggleTheme=toggleTheme;
 window.editRenda=editRenda;
 window.closeModalRenda=closeModalRenda;
 window.salvarRenda=salvarRenda;
