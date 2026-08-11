@@ -679,16 +679,16 @@ const db = getFirestore(fbApp);
 
 // ── CATEGORIES ──────────────────────────────────────────────
 const CATS=[
-  {id:'alimentacao',icon:'🍽️',name:'Alimentação',color:'#C1652E',kw:['restaurante','lanche','almoco','jantar','ifood','pizza','burger','hamburguer','cafe','cafeteria','padaria','mercado','supermercado','comida','refeicao','marmita','delivery','rappi','acai','sorvete','churrasco','sushi']},
-  {id:'transporte',icon:'🚗',name:'Transporte',color:'#3B76B0',kw:['uber','99','gasolina','combustivel','etanol','posto','estacionamento','onibus','metro','trem','taxi','mototaxi','pedagio','passagem','bilhete']},
-  {id:'saude',icon:'❤️',name:'Saúde',color:'#A6395C',kw:['farmacia','remedio','medicamento','medico','consulta','dentista','hospital','clinica','exame','academia','fisioterapia','psicologo','suplemento','vitamina','salao','cabeleireiro','manicure','pedicure','depilacao','estetica','spa','unha','cabelo','massagem']},
-  {id:'lazer',icon:'🎟️',name:'Lazer',color:'#7A5AA8',kw:['netflix','spotify','amazon prime','disney','cinema','teatro','show','festa','bar','balada','viagem','hotel','pousada','jogo','game','streaming','xbox','playstation']},
-  {id:'compras',icon:'🛍️',name:'Compras',color:'#B04C96',kw:['roupa','sapato','calcado','shopping','amazon','mercado livre','magazine','americanas','eletronico','celular','notebook','eletrodomestico','loja','vestuario','perfume','blusa','vestido','saia','bolsa','shein','renner','riachuelo']},
-  {id:'contas',icon:'🏠',name:'Contas & Casa',color:'#6B7355',kw:['luz','energia','agua','internet','telefone','aluguel','condominio','gas','iptu','seguro','conta','fatura','boleto','prestacao']},
-  {id:'educacao',icon:'🎓',name:'Educação',color:'#8C6F2E',kw:['curso','livro','faculdade','escola','colegio','mensalidade','udemy','alura','material','apostila','treinamento','workshop']},
-  {id:'cartao',icon:'💳',name:'Cartão Cred.',color:'#5C5FA6',kw:['fatura','nubank','inter','itau','bradesco','santander','caixa','c6','xp','cartao','credito','visa','mastercard','amex','elo','hipercard']},
-  {id:'emprestimos',icon:'🏦',name:'Empréstimos',color:'#263449',kw:['emprestimo','financiamento','super sim','supersim','credito pessoal','consignado','parcela do emprestimo','divida','juros']},
-  {id:'outros',icon:'📦',name:'Outros',color:'#8A8272',kw:[]}
+  {id:'alimentacao',icon:'🍽️',name:'Alimentação',color:'#F97316',kw:['restaurante','lanche','almoco','jantar','ifood','pizza','burger','hamburguer','cafe','cafeteria','padaria','mercado','supermercado','comida','refeicao','marmita','delivery','rappi','acai','sorvete','churrasco','sushi']},
+  {id:'transporte',icon:'🚗',name:'Transporte',color:'#3B82F6',kw:['uber','99','gasolina','combustivel','etanol','posto','estacionamento','onibus','metro','trem','taxi','mototaxi','pedagio','passagem','bilhete']},
+  {id:'saude',icon:'❤️',name:'Saúde',color:'#F43F5E',kw:['farmacia','remedio','medicamento','medico','consulta','dentista','hospital','clinica','exame','academia','fisioterapia','psicologo','suplemento','vitamina','salao','cabeleireiro','manicure','pedicure','depilacao','estetica','spa','unha','cabelo','massagem']},
+  {id:'lazer',icon:'🎟️',name:'Lazer',color:'#8B5CF6',kw:['netflix','spotify','amazon prime','disney','cinema','teatro','show','festa','bar','balada','viagem','hotel','pousada','jogo','game','streaming','xbox','playstation']},
+  {id:'compras',icon:'🛍️',name:'Compras',color:'#EC4899',kw:['roupa','sapato','calcado','shopping','amazon','mercado livre','magazine','americanas','eletronico','celular','notebook','eletrodomestico','loja','vestuario','perfume','blusa','vestido','saia','bolsa','shein','renner','riachuelo']},
+  {id:'contas',icon:'🏠',name:'Contas & Casa',color:'#14B8A6',kw:['luz','energia','agua','internet','telefone','aluguel','condominio','gas','iptu','seguro','conta','fatura','boleto','prestacao']},
+  {id:'educacao',icon:'🎓',name:'Educação',color:'#84CC16',kw:['curso','livro','faculdade','escola','colegio','mensalidade','udemy','alura','material','apostila','treinamento','workshop']},
+  {id:'cartao',icon:'💳',name:'Cartão Cred.',color:'#6366F1',kw:['fatura','nubank','inter','itau','bradesco','santander','caixa','c6','xp','cartao','credito','visa','mastercard','amex','elo','hipercard']},
+  {id:'emprestimos',icon:'🏦',name:'Empréstimos',color:'#475569',kw:['emprestimo','financiamento','super sim','supersim','credito pessoal','consignado','parcela do emprestimo','divida','juros']},
+  {id:'outros',icon:'📦',name:'Outros',color:'#78716C',kw:[]}
 ];
 // Ícones de linha desenhados à mão (em vez de emoji de sistema, que varia feio entre aparelhos)
 const CAT_ICON_PATHS={
