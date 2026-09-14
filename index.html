@@ -1091,6 +1091,10 @@ function abrirApp(){
   document.documentElement.setAttribute('data-theme','light'); // modo escuro removido — app sempre no claro
   S.theme='light';
   checkMonthRollover();
+  // Sempre aplicar mês padrão após dia 10
+  const _md=getMesDefault();
+  S.currentYear=_md.year;
+  S.currentMonth=_md.month;
   garantirRecorrentesAte(S.currentYear,S.currentMonth);
   migrarCategoriasLegado();
   migrarCategoriasVinculadas();
