@@ -1195,8 +1195,8 @@ function checkMonthRollover(){
   const ym=now.getFullYear()+'-'+now.getMonth();
   if(!S.lastYM){S.lastYM=ym;save();return;}
   if(S.lastYM!==ym){
-    S.currentYear=now.getFullYear();
-    S.currentMonth=now.getMonth();
+    S.currentYear=getMesDefault().year;
+    S.currentMonth=getMesDefault().month;
     garantirRecorrentesAte(now.getFullYear(),now.getMonth());
     S.lastYM=ym;
     save();
