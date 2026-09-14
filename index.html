@@ -743,7 +743,17 @@ async function sha256(str){
 
 // ── STATE ───────────────────────────────────────────────────
 let usuarioLogado=null;
-let S={renda:0,transactions:[],fixedExpenses:[],recorrentes:[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:'',theme:'light'};
+
+// Retorna o mês padrão: se dia >= 10, mostra o próximo mês
+function getMesDefault(){
+  const now=new Date();
+  if(now.getDate()>=10){
+    const proximo=new Date(now.getFullYear(),now.getMonth()+1,1);
+    return {year:proximo.getFullYear(),month:proximo.getMonth()};
+  }
+  return {year:now.getFullYear(),month:now.getMonth()};
+}
+let S={renda:0,transactions:[],fixedExpenses:[],recorrentes:[],currentYear:getMesDefault().year,currentMonth:getMesDefault().month,lastYM:'',theme:'light'};
 let pizzaChart=null,barChart=null;
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
 let _codigoRecem='';
@@ -929,7 +939,7 @@ async function fazerLogin(){
       if(h===cached.senhaHash){
         usuarioLogado=cached;
         localStorage.setItem('gmLogado',codigo);
-        S={renda:cached.renda||0,transactions:cached.transactions||[],fixedExpenses:cached.fixedExpenses||[],recorrentes:cached.recorrentes||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:cached.lastYM||'',theme:cached.theme||'light'};
+        S={renda:cached.renda||0,transactions:cached.transactions||[],fixedExpenses:cached.fixedExpenses||[],recorrentes:cached.recorrentes||[],currentYear:getMesDefault().year,currentMonth:getMesDefault().month,lastYM:cached.lastYM||'',theme:cached.theme||'light'};
         loadEl.classList.add('hidden');
         if(cached.primeiroAcesso){
           document.getElementById('tela-login').classList.add('hidden');
@@ -951,7 +961,7 @@ async function fazerLogin(){
     if(h!==u.senhaHash){erroEl.textContent='Senha incorreta';loadEl.classList.add('hidden');return;}
     usuarioLogado=u;
     localStorage.setItem('gmLogado',u.codigo);
-    S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],recorrentes:u.recorrentes||[],currentYear:new Date().getFullYear(),currentMonth:new Date().getMonth(),lastYM:u.lastYM||'',theme:u.theme||'light'};
+    S={renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],recorrentes:u.recorrentes||[],currentYear:getMesDefault().year,currentMonth:getMesDefault().month,lastYM:u.lastYM||'',theme:u.theme||'light'};
     localStorage.setItem('gmCache_'+u.codigo,JSON.stringify({nome:u.nome,codigo:u.codigo,senhaHash:u.senhaHash,primeiroAcesso:false,renda:u.renda||0,transactions:u.transactions||[],fixedExpenses:u.fixedExpenses||[],recorrentes:u.recorrentes||[],lastYM:u.lastYM||'',theme:u.theme||'light'}));
     loadEl.classList.add('hidden');
     if(u.primeiroAcesso){
